@@ -85,6 +85,7 @@ tests/                      Tes PHPUnit (fitur & aturan bisnis)
 
 ## Instalasi (VPS / hosting dengan SSH)
 
+```bash
 git clone https://github.com/andieawan/absensi-pusat.git absensi && cd absensi
 composer install --no-dev --optimize-autoloader
 cp .env.example .env && php artisan key:generate
