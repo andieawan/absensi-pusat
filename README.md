@@ -84,8 +84,8 @@ tests/                      Tes PHPUnit (fitur & aturan bisnis)
 > **Ubuntu Server?** Ikuti panduan lengkap langkah demi langkah di [`docs/UBUNTU.md`](docs/UBUNTU.md) (Nginx + PHP-FPM + MariaDB + HTTPS + backup).
 
 ## Instalasi (VPS / hosting dengan SSH)
-```bash
-git clone https://github.com/andieawan/absensi-siswa.smkibu.git absensi && cd absensi
+
+git clone https://github.com/andieawan/absensi-pusat.git absensi && cd absensi
 composer install --no-dev --optimize-autoloader
 cp .env.example .env && php artisan key:generate
 # isi DB_* serta ADMIN_USERNAME / ADMIN_PASSWORD (min. 10 karakter) di .env

@@ -1,5 +1,7 @@
 # Pasang di Ubuntu Server (dari nol sampai jalan)
 
+> **Urutan:** pasang dulu **Pusat Sekolah** (repo `pusat-sekolah`, `docs/PENYIAPAN-VM.md`), lalu panduan ini. Menyambung ke Pusat ada di **langkah 12b**; tanpa Pusat aplikasi tetap berjalan normal.
+
 Panduan ini untuk **Ubuntu 22.04 / 24.04** dengan **Nginx + PHP-FPM + MariaDB**. Semua perintah dijalankan sebagai
 user biasa yang punya `sudo` (bukan langsung `root`). Ganti `absensi.sekolah.sch.id` dengan domain/IP server Anda.
 
@@ -56,7 +58,7 @@ EXIT;
 ## 4. Ambil kode aplikasi
 ```bash
 sudo mkdir -p /var/www/absensi && sudo chown $USER:$USER /var/www/absensi
-git clone https://github.com/andieawan/absensi-siswa.smkibu.git /var/www/absensi
+git clone https://github.com/andieawan/absensi-pusat.git /var/www/absensi
 cd /var/www/absensi
 composer install --no-dev --optimize-autoloader
 ```
@@ -152,6 +154,21 @@ Ikut cadangkan juga `.env` dan folder `storage/app/private` (scan surat BK/TU): 
 - [ ] Buka dari HP → "Tambahkan ke layar utama" (PWA).
 - [ ] `sudo -u www-data php artisan absensi:backup` berhasil.
 - [ ] Hapus `ADMIN_PASSWORD` dari `.env` bila pernah diisi.
+
+## 12b. Sambungkan ke Pusat Sekolah (opsional, bisa belakangan)
+1. Di server **Pusat**: `php artisan pusat:aplikasi-baru absensi --base-url=https://absensi.sekolah.sch.id --redirect=https://absensi.sekolah.sch.id/sso/callback --webhook=https://absensi.sekolah.sch.id/api/pusat/webhook` — salin `client_id`, `client_secret`, `webhook_secret` (tampil sekali).
+2. Di server Absensi, isi `.env`:
+   ```ini
+   PUSAT_ENABLED=true
+   PUSAT_URL=https://pusat.sekolah.sch.id
+   PUSAT_CLIENT_ID=...
+   PUSAT_CLIENT_SECRET=...
+   PUSAT_WEBHOOK_SECRET=...
+   TRUSTED_PROXIES=<IP NPMplus>      # bila di belakang proxy
+   ```
+   lalu `php artisan migrate --force && php artisan config:cache`.
+3. Admin → **Pusat**: klik *Uji koneksi*, lalu *Periksa* (simulasi) sebelum *Terapkan*. Tombol "Masuk lewat Pusat" muncul di halaman login; login lokal tetap ada sebagai cadangan.
+4. Mengisi Pusat dari data Absensi yang sudah ada: `php artisan pusat:ekspor` (lihat `docs/PUSAT.md`).
 
 ## 13. Memperbarui ke versi baru
 **Cara singkat (disarankan):**
