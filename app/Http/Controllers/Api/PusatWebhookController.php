@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Services\PusatAkun;
+use App\Services\PusatKlien;
+use App\Support\PusatTanda;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Penerima webhook Pusat. Aman: tanda tangan HMAC + batas waktu 5 menit + idempoten (X-Pusat-Delivery).
+ * Data induk TIDAK diubah di sini (sinkron manual lewat Admin → Integrasi Pusat); webhook hanya menandai
+ * "ada perubahan menunggu". Satu pengecualian: pencabutan akses akun diterapkan langsung demi keamanan.
+ */
+class PusatWebhookController extends Controller
+{
+    public function __invoke(Request $request)
+    {
+        if (! PusatKlien::aktif() || ! PusatKlien::siap() || config('pusat.webhook_secret') === '') {
+            return response()->json(['ok' => false], 404);
+        }
+        $badan = $request->getContent();
+        $waktu = (int) $request->header('X-Pusat-Timestamp');
+        if (! PusatTanda::verifikasi((string) config('pusat.webhook_secret'), $waktu, $badan, (string) $request->header('X-Pusat-Signature'))) {
+            return response()->json(['ok' => false, 'error' => 'tanda_tangan_salah'], 401);
+        }
+
+        $id = substr((string) $request->header('X-Pusat-Delivery'), 0, 64);
+        $event = substr((string) $request->header('X-Pusat-Event'), 0, 60);
+        if ($id === '' || $event === '') {
+            return response()->json(['ok' => false, 'error' => 'header_kurang'], 422);
+        }
+        $baru = DB::table('pusat_webhook')->insertOrIgnore(['delivery_id' => $id, 'event' => $event, 'created_at' => now('UTC')->format('Y-m-d H:i:s')]);
+        if (! $baru) {
+            return response()->json(['ok' => true, 'duplikat' => true]); // pengiriman ulang: sudah diproses
+        }
+        // Simpan secukupnya (bersihkan entri lama agar tabel tidak membengkak).
+        DB::table('pusat_webhook')->where('created_at', '<', now('UTC')->subDays(7)->format('Y-m-d H:i:s'))->delete();
+
+        $data = (array) $request->json('data', []);
+        if (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
+            PusatAkun::cabutBilaPerlu($data);
+        } elseif (preg_match('/^(siswa|kelas|jurusan|tahun_ajaran)\./', $event)) {
+            PusatKlien::simpan('perubahan_menunggu', (int) PusatKlien::baca('perubahan_menunggu', 0) + 1);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+}
