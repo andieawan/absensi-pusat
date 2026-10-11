@@ -23,7 +23,7 @@ sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw --force enable
 (Perintah `ufw` boleh dilewati bila server sudah dilindungi firewall lain. Pastikan SSH tidak terkunci.)
 
 ## 2. Pasang paket
-**Ubuntu 24.04** sudah membawa PHP 8.3 (cukup, aplikasi butuh ≥ 8.3):
+**Ubuntu 26.04** membawa PHP 8.5 dan **24.04** membawa PHP 8.3 (keduanya cukup, aplikasi butuh ≥ 8.3):
 ```bash
 sudo apt -y install nginx mariadb-server git unzip curl composer \
   php-fpm php-cli php-mysql php-sqlite3 php-mbstring php-xml php-zip php-curl php-intl
@@ -36,10 +36,10 @@ sudo apt -y install nginx mariadb-server git unzip curl composer \
 ```
 Cek: `php -v` (harus ≥ 8.3) dan `php -m | grep -E "zip|mbstring|pdo_mysql"`.
 
-Naikkan batas unggah PHP (untuk scan surat & impor Excel). Ganti `8.3` sesuai versi Anda:
+Naikkan batas unggah PHP (untuk scan surat & impor Excel). Ganti `8.5` sesuai hasil `php -v` Anda:
 ```bash
-sudo sed -i 's/^upload_max_filesize.*/upload_max_filesize = 10M/; s/^post_max_size.*/post_max_size = 12M/' /etc/php/8.3/fpm/php.ini
-sudo systemctl restart php8.3-fpm
+sudo sed -i 's/^upload_max_filesize.*/upload_max_filesize = 10M/; s/^post_max_size.*/post_max_size = 12M/' /etc/php/8.5/fpm/php.ini
+sudo systemctl restart php8.5-fpm
 ```
 
 ## 3. Buat database
@@ -104,7 +104,7 @@ Opsional — isi **data contoh** untuk mencoba: `php artisan db:seed --class=Dem
 ## 8. Nginx
 ```bash
 sudo cp /var/www/absensi/deploy/nginx-absensi.conf /etc/nginx/sites-available/absensi
-sudo nano /etc/nginx/sites-available/absensi     # ganti server_name, dan versi php8.3-fpm.sock bila beda
+sudo nano /etc/nginx/sites-available/absensi     # ganti server_name, lalu samakan soket PHP: `ls /run/php/` (mis. php8.5-fpm.sock)
 sudo ln -s /etc/nginx/sites-available/absensi /etc/nginx/sites-enabled/absensi
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
@@ -215,7 +215,7 @@ Untuk berkas dari komputer: unggah dengan `scp absensi_xxx.sql user@server:/tmp/
 | Gejala | Penyebab & solusi |
 |---|---|
 | **500 Server Error** | Lihat `tail -50 /var/www/absensi/storage/logs/laravel.log`. Umumnya `APP_KEY` kosong (`php artisan key:generate`), `.env` salah, atau izin folder (langkah 6) |
-| **502 Bad Gateway** | PHP-FPM mati/soket salah: `sudo systemctl status php8.3-fpm`; samakan versi di `fastcgi_pass` |
+| **502 Bad Gateway** | PHP-FPM mati/soket salah: `sudo systemctl status php*-fpm`; samakan versi di `fastcgi_pass` |
 | **404 untuk semua halaman selain `/`** | `root` Nginx harus menunjuk ke folder **`public`**, dan blok `location /` memakai `try_files … /index.php?$query_string` |
 | **Unknown database / Access denied** | `DB_*` di `.env` tidak cocok dengan langkah 3. Uji: `mariadb -u absensi -p absensi_siswa` |
 | **Permission denied … storage/logs** | Ulangi langkah 6 |
