@@ -4,6 +4,9 @@ Pasang **Pusat** lebih dulu dan siapkan alat (Laragon, Git) mengikuti `docs/PENY
 Selalu pakai alamat `http://127.0.0.1:8001` (bukan `localhost`).
 
 ## 1. Ambil kode
+
+> **`vendor/` sudah ikut di repo** (dibuat dengan `composer install --no-dev`, PHP 8.3). Setelah `git clone`, langkah `composer install` boleh dilewati. Jalankan `composer install` hanya untuk menjalankan tes (butuh paket dev) atau setelah `composer.json` berubah; untuk memperbarui `vendor/` di repo, jalankan workflow **Bundel vendor** (tab Actions di GitHub).
+
 ```bash
 cd C:\laragon\www
 git clone https://github.com/andieawan/absensi-pusat.git

@@ -56,6 +56,9 @@ EXIT;
 ```
 
 ## 4. Ambil kode aplikasi
+
+> **`vendor/` sudah ikut di repo** (dibuat dengan `composer install --no-dev`, PHP 8.3). Setelah `git clone`, langkah `composer install` boleh dilewati. Jalankan `composer install` hanya untuk menjalankan tes (butuh paket dev) atau setelah `composer.json` berubah; untuk memperbarui `vendor/` di repo, jalankan workflow **Bundel vendor** (tab Actions di GitHub).
+
 ```bash
 sudo mkdir -p /var/www/absensi && sudo chown $USER:$USER /var/www/absensi
 git clone https://github.com/andieawan/absensi-pusat.git /var/www/absensi
