@@ -48,15 +48,17 @@ php artisan serve --port=8001
 Buka http://127.0.0.1:8001/login
 
 ## 5. Sambungkan ke Pusat (opsional)
-1. Di folder Pusat: `php artisan pusat:aplikasi-baru absensi --base-url=http://127.0.0.1:8001 --redirect=http://127.0.0.1:8001/sso/callback --webhook=http://127.0.0.1:8001/api/pusat/webhook`
-2. Isi `.env` Absensi, lalu `php artisan migrate` dan `php artisan config:clear`:
-```ini
-PUSAT_ENABLED=true
-PUSAT_URL=http://127.0.0.1:8000
-PUSAT_CLIENT_ID=...
-PUSAT_CLIENT_SECRET=...
-PUSAT_WEBHOOK_SECRET=...
+Cara tercepat: dari folder **Pusat**, satu perintah mendaftarkan Absensi dan menuliskan kredensial ke `.env` Absensi ini:
+```bash
+php artisan pusat:siapkan-lokal --absensi-url=http://127.0.0.1:8001 --env-absensi=C:\laragon\www\absensi-pusat\.env --demo
 ```
-3. Admin → **Pusat**: *Uji koneksi*, lalu *Periksa* (simulasi) sebelum *Terapkan*. Pusat dan Absensi harus sama-sama sedang di-serve.
+(Ganti alamat dan path sesuai milik Anda; `--demo` menambah guru/kelas/siswa contoh.) Lalu di folder Absensi:
+```bash
+php artisan migrate
+php artisan config:clear
+```
+Masuk ke Absensi → Admin → **Pusat** → *Uji koneksi* → *Periksa* (simulasi) → *Terapkan*. Tombol "Masuk lewat Pusat" di halaman login bisa dipakai dengan akun superadmin Pusat.
+
+Cara manual (tanpa perintah di atas): `php artisan pusat:aplikasi-baru absensi --base-url=http://127.0.0.1:8001` di Pusat, lalu isi `PUSAT_ENABLED=true`, `PUSAT_URL`, `PUSAT_CLIENT_ID`, `PUSAT_CLIENT_SECRET`, `PUSAT_WEBHOOK_SECRET` di `.env` Absensi.
 
 Masalah umum (database, cookie, redirect_uri, port): lihat bagian terakhir `docs/PENYIAPAN-LOKAL.md` di repo `pusat-sekolah`.
