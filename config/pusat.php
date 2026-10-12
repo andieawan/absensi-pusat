@@ -9,6 +9,12 @@ return [
     'webhook_secret' => env('PUSAT_WEBHOOK_SECRET', ''),
     'timeout' => (int) env('PUSAT_TIMEOUT', 15),
 
+    // Pemeriksaan sertifikat HTTPS Pusat. Hanya untuk uji lokal dengan sertifikat buatan sendiri:
+    // PUSAT_VERIFY_SSL=false mematikannya (JANGAN di server sungguhan). Lebih baik: PUSAT_CA_BUNDLE=path
+    // berkas .pem berisi CA lokal Anda (mis. rootCA.pem dari mkcert/envkit), pemeriksaan tetap aktif.
+    'verify_ssl' => filter_var(env('PUSAT_VERIFY_SSL', true), FILTER_VALIDATE_BOOLEAN),
+    'ca_bundle' => env('PUSAT_CA_BUNDLE'),
+
     // Sinkron data induk: false = hanya lewat tombol Admin → Integrasi Pusat; true = otomatis tiap jam.
     'sinkron_otomatis' => (bool) env('PUSAT_SINKRON_OTOMATIS', false),
 

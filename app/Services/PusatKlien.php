@@ -24,6 +24,7 @@ class PusatKlien
     public static function http(): PendingRequest
     {
         return Http::baseUrl(config('pusat.url'))
+            ->withOptions(['verify' => config('pusat.ca_bundle') ?: (bool) config('pusat.verify_ssl')])
             ->withBasicAuth(config('pusat.client_id'), config('pusat.client_secret'))
             ->acceptJson()
             ->timeout(config('pusat.timeout'));

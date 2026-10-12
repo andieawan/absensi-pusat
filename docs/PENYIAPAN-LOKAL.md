@@ -62,3 +62,10 @@ Masuk ke Absensi → Admin → **Pusat** → *Uji koneksi* → *Periksa* (simula
 Cara manual (tanpa perintah di atas): `php artisan pusat:aplikasi-baru absensi --base-url=http://127.0.0.1:8001` di Pusat, lalu isi `PUSAT_ENABLED=true`, `PUSAT_URL`, `PUSAT_CLIENT_ID`, `PUSAT_CLIENT_SECRET`, `PUSAT_WEBHOOK_SECRET` di `.env` Absensi.
 
 Masalah umum (database, cookie, redirect_uri, port): lihat bagian terakhir `docs/PENYIAPAN-LOKAL.md` di repo `pusat-sekolah`.
+
+## Galat sertifikat HTTPS (cURL error 60)
+Bila situs lokal memakai HTTPS bersertifikat buatan sendiri (mis. envkit/mkcert), PHP menolaknya. Pilih satu di `.env` aplikasi ini, lalu `php artisan config:clear`:
+- `PUSAT_URL=http://...` bila Pusat juga bisa dibuka lewat http;
+- `PUSAT_CA_BUNDLE=C:\path\rootCA.pem` (berkas CA lokal; pemeriksaan tetap aktif) — disarankan;
+- `PUSAT_VERIFY_SSL=false` — hanya untuk uji lokal, jangan di server sungguhan.
+Di sisi Pusat (pengiriman webhook ke aplikasi ini) pakai `PUSAT_WEBHOOK_VERIFY_SSL=false` atau `PUSAT_WEBHOOK_CA_BUNDLE=...`. Pintasan: `php artisan pusat:siapkan-lokal ... --abaikan-ssl` (di folder Pusat) menuliskan keduanya.
