@@ -85,6 +85,8 @@ tests/                      Tes PHPUnit (fitur & aturan bisnis)
 
 ## Instalasi (VPS / hosting dengan SSH)
 
+> Coba dulu di komputer Windows: [`docs/PENYIAPAN-LOKAL.md`](docs/PENYIAPAN-LOKAL.md).
+
 ```bash
 git clone https://github.com/andieawan/absensi-pusat.git absensi && cd absensi
 composer install --no-dev --optimize-autoloader
