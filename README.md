@@ -1,5 +1,8 @@
 # Absensi Siswa — SMK Islam Bustanul Ulum Pakusari (Laravel 13)
 
+
+> **Produksi:** urutan lengkap Pusat → aplikasi ada di [runbook Pusat](https://github.com/andieawan/pusat-sekolah/blob/main/docs/PRODUKSI.md). Cek kesiapan server kapan saja: `php artisan absensi:periksa`.
+
 Aplikasi absensi & nilai siswa berbasis **Laravel 13** (PHP 8.3+). Halaman dirender di server dengan Blade;
 JavaScript hanya sedikit (tanpa npm/Vite, tanpa langkah build). Database MySQL/MariaDB (disarankan) atau SQLite.
 

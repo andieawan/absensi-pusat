@@ -44,6 +44,8 @@ fi
 
 step "Ambil kode terbaru"
 if [ -d .git ]; then
+  # vendor/ ikut di repo; composer bisa mengubah berkas autoload -> kembalikan dulu agar pull tidak bentrok
+  as_owner git ls-files -m -- vendor | as_owner xargs -r git checkout --
   as_owner git pull --ff-only
 else
   echo "Folder ini bukan hasil git clone — lewati git pull (kode diperbarui dari zip)."
@@ -71,4 +73,5 @@ step "Aktifkan kembali"
 php artisan up && DOWN=0
 
 echo
+sudo -u "$WEB" php artisan absensi:periksa || echo "PERHATIAN: ada masalah di atas — perbaiki sebelum dipakai."
 echo "Selesai. Versi: $(as_owner git rev-parse --short HEAD 2>/dev/null || echo 'zip')"
