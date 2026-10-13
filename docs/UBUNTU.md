@@ -3,7 +3,7 @@
 > **Urutan:** pasang dulu **Pusat Sekolah** (repo `pusat-sekolah`, `docs/PENYIAPAN-VM.md`), lalu panduan ini. Menyambung ke Pusat ada di **langkah 12b**; tanpa Pusat aplikasi tetap berjalan normal.
 
 Panduan ini untuk **Ubuntu 22.04 / 24.04** dengan **Nginx + PHP-FPM + MariaDB**. Semua perintah dijalankan sebagai
-user biasa yang punya `sudo` (bukan langsung `root`). Ganti `absensi.sekolah.sch.id` dengan domain/IP server Anda.
+user biasa yang punya `sudo` (bukan langsung `root`). Ganti `absensi.smkibupakusari.sch.id` dengan domain/IP server Anda.
 
 > Ringkasnya: pasang paket → buat database → ambil kode → isi `.env` → `migrate` → Nginx → HTTPS → cron & backup.
 
@@ -11,7 +11,7 @@ user biasa yang punya `sudo` (bukan langsung `root`). Ganti `absensi.sekolah.sch
 | Hal | Keterangan |
 |---|---|
 | Server | Ubuntu 22.04/24.04, RAM ≥ 1 GB, akses SSH + `sudo` |
-| Alamat | **Domain** (mis. `absensi.sekolah.sch.id` → IP server) *atau* hanya IP lokal (lihat langkah 9) |
+| Alamat | **Domain** (mis. `absensi.smkibupakusari.sch.id` → IP server) *atau* hanya IP lokal (lihat langkah 9) |
 | HTTPS | Disarankan. **Wajib** untuk Absen Saya berbasis lokasi (GPS) dan untuk memasang aplikasi ke HP (PWA) |
 
 ## 1. Perbarui sistem & firewall
@@ -80,7 +80,7 @@ nano .env
 ```
 Yang wajib diubah:
 ```ini
-APP_URL=https://absensi.sekolah.sch.id
+APP_URL=https://absensi.smkibupakusari.sch.id
 DB_DATABASE=absensi_siswa
 DB_USERNAME=absensi
 DB_PASSWORD=PasswordKuat123!
@@ -112,13 +112,13 @@ sudo ln -s /etc/nginx/sites-available/absensi /etc/nginx/sites-enabled/absensi
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
-Buka `http://absensi.sekolah.sch.id` — halaman login harus muncul.
+Buka `http://absensi.smkibupakusari.sch.id` — halaman login harus muncul.
 
 ## 9. HTTPS (pilih salah satu)
 **A. Domain publik + Let's Encrypt (paling mudah).** Port 80/443 server terbuka ke internet:
 ```bash
 sudo apt -y install certbot python3-certbot-nginx
-sudo certbot --nginx -d absensi.sekolah.sch.id
+sudo certbot --nginx -d absensi.smkibupakusari.sch.id
 ```
 Perpanjangan otomatis sudah diatur certbot (cek: `sudo certbot renew --dry-run`).
 
@@ -164,11 +164,11 @@ Ikut cadangkan juga `.env` dan folder `storage/app/private` (scan surat BK/TU): 
 - [ ] Hapus `ADMIN_PASSWORD` dari `.env` bila pernah diisi.
 
 ## 12b. Sambungkan ke Pusat Sekolah (opsional, bisa belakangan)
-1. Di server **Pusat**: `php artisan pusat:aplikasi-baru absensi --base-url=https://absensi.sekolah.sch.id --redirect=https://absensi.sekolah.sch.id/sso/callback --webhook=https://absensi.sekolah.sch.id/api/pusat/webhook` — salin `client_id`, `client_secret`, `webhook_secret` (tampil sekali).
+1. Di server **Pusat**: `php artisan pusat:aplikasi-baru absensi --base-url=https://absensi.smkibupakusari.sch.id --redirect=https://absensi.smkibupakusari.sch.id/sso/callback --webhook=https://absensi.smkibupakusari.sch.id/api/pusat/webhook` — salin `client_id`, `client_secret`, `webhook_secret` (tampil sekali).
 2. Di server Absensi, isi `.env`:
    ```ini
    PUSAT_ENABLED=true
-   PUSAT_URL=https://pusat.sekolah.sch.id
+   PUSAT_URL=https://pusat.smkibupakusari.sch.id
    PUSAT_CLIENT_ID=...
    PUSAT_CLIENT_SECRET=...
    PUSAT_WEBHOOK_SECRET=...
