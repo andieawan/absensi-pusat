@@ -43,7 +43,7 @@ class Periksa extends Command
         $this->newLine();
         $this->line('<options=bold>PHP & berkas</>');
         version_compare(PHP_VERSION, '8.3.0', '>=') ? $this->ok('PHP '.PHP_VERSION) : $this->gagalkan('PHP '.PHP_VERSION.' terlalu lama', 'Butuh PHP 8.3+');
-        $ext = array_values(array_filter(['pdo_mysql', 'mbstring', 'openssl', 'curl', 'xml', 'zip', 'gd'], fn ($e) => ! extension_loaded($e)));
+        $ext = array_values(array_filter(['pdo_mysql', 'mbstring', 'openssl', 'curl', 'xml', 'zip'], fn ($e) => ! extension_loaded($e)));
         $ext ? $this->gagalkan('Ekstensi PHP belum ada: '.implode(', ', $ext), 'sudo apt install '.implode(' ', array_map(fn ($e) => 'php-'.str_replace('pdo_mysql', 'mysql', $e), $ext)).' lalu muat ulang php-fpm') : $this->ok('Ekstensi PHP lengkap');
         is_file(base_path('vendor/autoload.php')) ? $this->ok('vendor/ ada') : $this->gagalkan('vendor/ tidak ada', 'composer install --no-dev --optimize-autoloader');
         foreach (['storage', 'storage/logs', 'storage/framework', 'bootstrap/cache'] as $d) {
