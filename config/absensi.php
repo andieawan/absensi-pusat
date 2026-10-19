@@ -4,6 +4,8 @@
 return [
     'school_name' => env('SCHOOL_NAME', 'SMK Islam Bustanul Ulum Pakusari'),
     'timezone' => env('ABSENSI_TIMEZONE', 'Asia/Jakarta'), // untuk "hari ini" & tanggal surat; data disimpan UTC
+    // Alamat aplikasi BK mandiri (mis. https://bk.smkibupakusari.sch.id). Bila diisi, menu BK & surat dialihkan ke sana.
+    'bk_url' => env('BK_URL', ''),
     'auto_backup' => (bool) env('ABSENSI_AUTO_BACKUP', true),
     'backup_dir' => env('ABSENSI_BACKUP_DIR', storage_path('app/backups')),
     'admin' => [

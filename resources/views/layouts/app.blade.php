@@ -55,7 +55,7 @@
         <a class="brand" href="{{ route('dashboard') }}"><img class="logo-img" src="{{ asset('icons/icon-192.png') }}" alt="" width="36" height="36"><span><b>Absensi Siswa</b><small>{{ $settings->school_name }}</small></span></a>
         <nav class="tabs" aria-label="Menu utama">
             @foreach(array_merge($tabs, $extra) as [$r, $label, , $icon, $pat])
-                <a href="{{ route($r) }}" @if(request()->routeIs($pat)) class="on" aria-current="page" @endif><svg class="ic"><use href="#{{ $icon }}"/></svg>{{ $label }}</a>
+                <a href="{{ ($r === 'bk.home' && config('absensi.bk_url')) ? config('absensi.bk_url') : route($r) }}" @if(request()->routeIs($pat)) class="on" aria-current="page" @endif><svg class="ic"><use href="#{{ $icon }}"/></svg>{{ $label }}</a>
             @endforeach
         </nav>
         <details class="acct" data-close-outside>

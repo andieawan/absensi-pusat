@@ -43,7 +43,7 @@ class AttendanceService
     }
 
     /** @return array{created:int, updated:int} */
-    public static function write(array $entries, int $classId, ?int $subjectId, string $tanggal, int $recordedBy, string $via): array
+    public static function write(array $entries, int $classId, ?int $subjectId, string $tanggal, ?int $recordedBy, string $via): array
     {
         $created = $updated = 0;
         DB::transaction(function () use ($entries, $classId, $subjectId, $tanggal, $recordedBy, $via, &$created, &$updated) {

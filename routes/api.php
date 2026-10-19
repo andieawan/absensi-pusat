@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1Controller;
+use App\Http\Controllers\Api\V1TulisController;
 use Illuminate\Support\Facades\Route;
 
 // Penerima webhook dari Pusat Sekolah (tanda tangan HMAC; lihat PusatWebhookController).
@@ -23,5 +24,13 @@ Route::prefix('v1')->group(function () {
     Route::middleware('api.key:kehadiran:baca')->group(function () {
         Route::get('/siswa/{id}/rekap', [V1Controller::class, 'rekap'])->whereNumber('id');
         Route::get('/kehadiran', [V1Controller::class, 'kehadiran']);
+        Route::get('/kehadiran/ringkasan', [V1Controller::class, 'ringkasan']);
+        Route::get('/delegasi', [V1TulisController::class, 'delegasiIndex'])->middleware('api.key:kehadiran:tulis');
+    });
+    // Tulis (khusus aplikasi BK): scope kehadiran:tulis
+    Route::middleware('api.key:kehadiran:tulis')->group(function () {
+        Route::post('/kehadiran/manual', [V1TulisController::class, 'manual']);
+        Route::post('/delegasi', [V1TulisController::class, 'delegasiBuat']);
+        Route::delete('/delegasi/{token}', [V1TulisController::class, 'delegasiCabut']);
     });
 });

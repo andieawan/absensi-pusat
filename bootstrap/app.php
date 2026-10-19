@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         if ($proxies = env('TRUSTED_PROXIES')) {
             $middleware->trustProxies(at: $proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
         }
-        $middleware->alias(['api.key' => \App\Http\Middleware\AuthenticateApiKey::class]);
+        $middleware->alias(['api.key' => \App\Http\Middleware\AuthenticateApiKey::class, 'bk.alih' => \App\Http\Middleware\AlihkanKeBk::class]);
         $middleware->prepend(\App\Http\Middleware\LegacyLinks::class);
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->redirectUsersTo(fn () => route('dashboard'));

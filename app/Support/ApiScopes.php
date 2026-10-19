@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-/** Daftar izin (scope) kunci API. Hanya baca; data sensitif (catatan BK, nilai) belum dibuka. */
+/** Daftar izin (scope) kunci API. Data sensitif (catatan BK, nilai) tidak dibuka; satu-satunya izin tulis: kehadiran:tulis. */
 class ApiScopes
 {
     public const ALL = [
@@ -11,6 +11,7 @@ class ApiScopes
         'siswa:baca' => 'Baca data siswa (NIS, nama, JK, kelas, status)',
         'siswa:kontak' => 'Baca nama & No. HP orang tua (data pribadi — beri hanya bila perlu)',
         'kehadiran:baca' => 'Baca data kehadiran & rekap per siswa',
+        'kehadiran:tulis' => 'Tulis: input absensi manual per siswa & kelola tautan delegasi Ketua Kelas (khusus aplikasi BK)',
     ];
 
     public static function valid(array $scopes): array

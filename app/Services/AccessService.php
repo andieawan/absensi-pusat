@@ -27,14 +27,22 @@ class AccessService
         if (! $user->hasRole('bk')) {
             Rules::requireTeacher($user, null, $classId); // wali kelas (atau admin); Guru BK boleh untuk kelas mana pun
         }
+        $t = self::issueDelegation($classId, $hours, $user->id, $user->nama);
+
+        return $t;
+    }
+
+    /** Buat token delegasi (dipakai UI & API). $createdBy boleh null untuk pemanggil API. */
+    public static function issueDelegation(int $classId, int $hours, ?int $createdBy, string $actor): DelegationToken
+    {
         $hours = min(max(1, $hours), 24);
         $now = Dates::nowMillis();
         $exp = $now + $hours * 3600000;
         $t = DelegationToken::create([
             'token' => self::randomToken('kk_'), 'class_id' => $classId, 'status' => 'aktif', 'created_at' => Dates::isoUtc($now),
-            'created_by' => $user->id, 'expires_at' => Dates::isoUtc($exp), 'expires_at_millis' => $exp,
+            'created_by' => $createdBy, 'expires_at' => Dates::isoUtc($exp), 'expires_at_millis' => $exp,
         ]);
-        Audit::log('Buat Delegasi', 'Absensi', $user->nama, "Kelas #$classId, berlaku $hours jam");
+        Audit::log('Buat Delegasi', 'Absensi', $actor, "Kelas #$classId, berlaku $hours jam");
 
         return $t;
     }
@@ -76,7 +84,7 @@ class AccessService
             throw new UserError('Tanggal presensi harus hari ini atau maksimal 7 hari ke belakang.');
         }
         Rules::validateEntries($entries, $t->class_id);
-        AttendanceService::write($entries, $t->class_id, null, $tanggal, (int) $t->created_by, 'ketua_kelas_delegasi');
+        AttendanceService::write($entries, $t->class_id, null, $tanggal, $t->created_by !== null ? (int) $t->created_by : null, 'ketua_kelas_delegasi');
         Audit::log('Submit Absensi Delegasi', 'Absensi', "Ketua Kelas (token kelas #{$t->class_id})", "Tanggal: $tanggal, Total: ".count($entries).' siswa');
 
         return count($entries);

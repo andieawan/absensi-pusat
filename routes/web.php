@@ -68,14 +68,14 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/siswa/{student}/akses-wali', [StudentController::class, 'parentCreate'])->name('students.parent.create');
     Route::post('/siswa/akses-wali/{token}/cabut', [StudentController::class, 'parentRevoke'])->name('students.parent.revoke');
 
-    Route::middleware('can:bk')->group(function () {
+    Route::middleware(['bk.alih', 'can:bk'])->group(function () {
         Route::get('/bk/presensi', [BkController::class, 'index'])->name('bk');
         Route::post('/bk/presensi', [BkController::class, 'store'])->name('bk.store');
         Route::post('/bk/delegasi', [BkController::class, 'delegate'])->name('bk.delegate');
         Route::post('/bk/delegasi/{token}/cabut', [BkController::class, 'revoke'])->name('bk.revoke');
     });
     // Modul BK terpadu (Wali Kelas & Kepsek ikut melihat sesuai hak akses)
-    Route::middleware('can:bk-modul')->group(function () {
+    Route::middleware(['bk.alih', 'can:bk-modul'])->group(function () {
         Route::get('/bk', [BkRecordController::class, 'home'])->name('bk.home');
         Route::get('/bk/catatan/{jenis}', [BkRecordController::class, 'index'])->name('bk.records');
         Route::post('/bk/catatan/{jenis}', [BkRecordController::class, 'store'])->name('bk.records.store');
@@ -93,9 +93,9 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/rekap', [RecapController::class, 'index'])->name('recap');
     Route::get('/rekap/unduh', [RecapController::class, 'export'])->name('recap.export');
 
-    Route::get('/surat/peringatan/{student}', [LetterController::class, 'warning'])->name('letters.warning');
-    Route::get('/surat/panggilan/{student}', [LetterController::class, 'summons'])->name('letters.summons');
-    Route::get('/surat/{jenis}/{student}', [LetterController::class, 'form'])->whereIn('jenis', ['teguran', 'pernyataan-berhenti', 'pernyataan-mundur', 'berita-acara', 'izin'])->name('letters.form');
+    Route::get('/surat/peringatan/{student}', [LetterController::class, 'warning'])->middleware('bk.alih')->name('letters.warning');
+    Route::get('/surat/panggilan/{student}', [LetterController::class, 'summons'])->middleware('bk.alih')->name('letters.summons');
+    Route::get('/surat/{jenis}/{student}', [LetterController::class, 'form'])->whereIn('jenis', ['teguran', 'pernyataan-berhenti', 'pernyataan-mundur', 'berita-acara', 'izin'])->middleware('bk.alih')->name('letters.form');
     Route::get('/surat/laporan', [LetterController::class, 'report'])->name('letters.report');
 
     Route::get('/unduh/absensi', [ExportController::class, 'attendance'])->name('export.attendance');

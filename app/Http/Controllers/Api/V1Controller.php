@@ -57,7 +57,7 @@ class V1Controller extends Controller
 
     private static function kelas(SchoolClass $c, ?int $count = null): array
     {
-        $o = ['id' => $c->id, 'nama' => $c->name, 'jurusan' => $c->jurusan, 'angkatan' => $c->angkatan, 'tahun_ajaran' => $c->tahun_ajaran, 'semester' => $c->semester];
+        $o = ['id' => $c->id, 'uuid' => $c->pusat_uuid, 'nama' => $c->name, 'jurusan' => $c->jurusan, 'angkatan' => $c->angkatan, 'tahun_ajaran' => $c->tahun_ajaran, 'semester' => $c->semester];
         if ($count !== null) {
             $o['jumlah_siswa_aktif'] = $count;
         }
@@ -86,7 +86,7 @@ class V1Controller extends Controller
 
     private function siswa(Student $s, Request $r, array $classNames): array
     {
-        $o = ['id' => $s->id, 'nis' => $s->nis, 'nama' => $s->nama, 'jk' => $s->jk, 'kelas_id' => $s->class_id, 'kelas' => $classNames[$s->class_id] ?? null, 'status' => $s->status];
+        $o = ['id' => $s->id, 'uuid' => $s->pusat_uuid, 'nis' => $s->nis, 'nama' => $s->nama, 'jk' => $s->jk, 'kelas_id' => $s->class_id, 'kelas' => $classNames[$s->class_id] ?? null, 'status' => $s->status];
         if ($this->key($r)->can('siswa:kontak') && DbUpdate::parentContactReady()) {
             $o['nama_ortu'] = $s->nama_ortu;
             $o['telp_ortu'] = WhatsApp::normalize($s->telp_ortu);
@@ -129,6 +129,42 @@ class V1Controller extends Controller
             'siswa_id' => $id, 'total' => $s['total'], 'hadir' => $s['hadir'], 'izin' => $s['izin'], 'sakit' => $s['sakit'], 'alpa' => $s['alpa'],
             'persen_hadir' => $s['rate'], 'batas_minimal' => $s['threshold'], 'memenuhi' => $s['meets'],
         ]]);
+    }
+
+    /** Cari kelas dari ?kelas_id= atau ?kelas_uuid= (uuid dari Pusat). */
+    public static function cariKelas(Request $r): ?SchoolClass
+    {
+        if ($r->filled('kelas_uuid')) {
+            return SchoolClass::where('pusat_uuid', (string) $r->input('kelas_uuid'))->first();
+        }
+
+        return $r->filled('kelas_id') ? SchoolClass::find((int) $r->input('kelas_id')) : null;
+    }
+
+    /** Rekap kehadiran harian per siswa aktif satu kelas pada rentang tanggal (hemat dibanding menarik semua baris). */
+    public function ringkasan(Request $r): JsonResponse
+    {
+        $kelas = self::cariKelas($r);
+        if (! $kelas) {
+            return $this->notFound('Kelas');
+        }
+        $dari = (string) $r->query('dari', date('Y-m-d', (Dates::parse(Dates::today()) ?? time()) - 29 * 86400));
+        $sampai = (string) $r->query('sampai', Dates::today());
+        if (! Dates::valid($dari) || ! Dates::valid($sampai) || $dari > $sampai || (Dates::parse($sampai) - Dates::parse($dari)) / 86400 > 365) {
+            return AuthenticateApiKey::error('invalid_request', '"dari"/"sampai" harus YYYY-MM-DD, urut, maksimal 366 hari.', 422);
+        }
+        $cnt = [];
+        foreach (Attendance::where('class_id', $kelas->id)->whereNull('subject_id')->whereBetween('tanggal', [$dari, $sampai])->get(['student_id', 'status']) as $a) {
+            $cnt[$a->student_id][$a->status] = ($cnt[$a->student_id][$a->status] ?? 0) + 1;
+        }
+        $rows = Student::active()->where('class_id', $kelas->id)->orderBy('nama')->get()->map(function ($s) use ($cnt) {
+            $c = $cnt[$s->id] ?? [];
+
+            return ['siswa_id' => $s->id, 'siswa_uuid' => $s->pusat_uuid, 'nis' => $s->nis, 'nama' => $s->nama,
+                'hadir' => $c['H'] ?? 0, 'izin' => $c['I'] ?? 0, 'sakit' => $c['S'] ?? 0, 'alpa' => $c['A'] ?? 0];
+        })->values();
+
+        return response()->json(['data' => $rows, 'meta' => ['kelas_id' => $kelas->id, 'kelas_uuid' => $kelas->pusat_uuid, 'dari' => $dari, 'sampai' => $sampai]]);
     }
 
     public function kehadiran(Request $r): JsonResponse
