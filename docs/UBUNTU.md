@@ -63,8 +63,10 @@ EXIT;
 sudo mkdir -p /var/www/absensi && sudo chown $USER:$USER /var/www/absensi
 git clone https://github.com/andieawan/absensi-pusat.git /var/www/absensi
 cd /var/www/absensi
-composer install --no-dev --optimize-autoloader
+# composer install tidak perlu: vendor/ sudah ikut di repo
 ```
+
+> **Jangan pakai `sudo` pada `git clone`** — folder jadi milik root dan muncul *dubious ownership* / *Permission denied* di `vendor/`. Kalau sudah terlanjur: `sudo chown -R $USER:www-data /var/www/<folder>`.
 
 > **Repo privat? (muncul `Password authentication is not supported`)** GitHub tidak menerima password akun untuk git. Buat **token**:
 > GitHub → Settings → Developer settings → Personal access tokens → *Fine-grained tokens* → Repository access: hanya repo ini → Permissions: **Contents = Read-only**.
