@@ -35,7 +35,14 @@ class PusatAkun
         }
 
         if ($user && ! $user->is_active) {
-            return [null, 'Akun Anda dinonaktifkan di Absensi. Hubungi administrator.'];
+            // Dinonaktifkan otomatis oleh Pusat lalu aksesnya dipulihkan di Pusat (login ini membuktikannya): aktifkan lagi.
+            if ($user->pusat_uuid !== null && PusatKlien::baca('dc:'.$user->pusat_uuid) !== null) {
+                $user->update(['is_active' => true]);
+                \Illuminate\Support\Facades\DB::table('pusat_state')->where('kunci', 'dc:'.$user->pusat_uuid)->delete();
+                Audit::log('Akses Dipulihkan Pusat', 'Akun Guru', $user->nama, 'Akun diaktifkan kembali karena akses dipulihkan di Pusat');
+            } else {
+                return [null, 'Akun Anda dinonaktifkan di Absensi. Hubungi administrator.'];
+            }
         }
 
         if (! $user) {
@@ -102,6 +109,7 @@ class PusatAkun
             return false;
         }
         $user->update(['is_active' => false]); // sesi aktif keluar pada request berikutnya (EnsureActiveUser)
+        PusatKlien::simpan('dc:'.$uuid, 1); // penanda: boleh dipulihkan otomatis bila Pusat memberi akses lagi
         Audit::log('Akses Dicabut Pusat', 'Akun Guru', $user->nama, 'Akun dinonaktifkan karena akses dicabut di Pusat');
 
         return true;

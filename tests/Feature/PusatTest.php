@@ -244,6 +244,8 @@ class PusatTest extends TestCase
         $this->webhook('siswa.diperbarui', ['uuid' => 's-1'], 'dl-1')->assertOk();
         $this->webhook('siswa.diperbarui', ['uuid' => 's-1'], 'dl-1')->assertOk()->assertJson(['duplikat' => true]);
         $this->assertSame('1', (string) PusatKlien::baca('perubahan_menunggu'));
+        $this->webhook('kelas.diperbarui', ['uuid' => 'k-1'], 'dl-2')->assertOk();
+        $this->assertSame('2', (string) PusatKlien::baca('perubahan_menunggu'));
         $this->assertSame(6, Student::count()); // tidak ada data yang diubah
     }
 
@@ -258,6 +260,20 @@ class PusatTest extends TestCase
 
         $this->guru->update(['pusat_uuid' => 'u-3']);
         $this->webhook('akun.diperbarui', ['uuid' => 'u-3', 'aktif' => false, 'peran' => ['guru']])->assertOk();
+        $this->assertFalse($this->guru->fresh()->is_active);
+    }
+
+    public function test_akses_yang_dicabut_pusat_pulih_saat_login_lagi_tetapi_nonaktif_manual_tidak(): void
+    {
+        $this->wali->update(['pusat_uuid' => 'u-1']);
+        $this->webhook('akses.diperbarui', ['uuid' => 'u-1', 'aktif' => true, 'peran' => []])->assertOk();
+        $this->assertFalse($this->wali->fresh()->is_active);
+
+        $this->loginViaPusat($this->info(['peran' => ['guru']]))->assertRedirect(route('dashboard'));
+        $this->assertTrue($this->wali->fresh()->is_active);
+
+        $this->guru->update(['pusat_uuid' => 'u-3', 'is_active' => false]); // dinonaktifkan manual oleh admin
+        $this->loginViaPusat($this->info(['sub' => 'u-3', 'username' => $this->guru->username, 'peran' => ['guru']]))->assertRedirect(route('login'));
         $this->assertFalse($this->guru->fresh()->is_active);
     }
 

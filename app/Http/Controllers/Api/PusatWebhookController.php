@@ -43,7 +43,8 @@ class PusatWebhookController extends Controller
         if (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
             PusatAkun::cabutBilaPerlu($data);
         } elseif (preg_match('/^(siswa|kelas|jurusan|tahun_ajaran)\./', $event)) {
-            PusatKlien::simpan('perubahan_menunggu', (int) PusatKlien::baca('perubahan_menunggu', 0) + 1);
+            DB::table('pusat_state')->insertOrIgnore(['kunci' => 'perubahan_menunggu', 'nilai' => '0', 'updated_at' => now('UTC')->format('Y-m-d H:i:s')]);
+            DB::table('pusat_state')->where('kunci', 'perubahan_menunggu')->update(['nilai' => DB::raw('CAST(nilai AS UNSIGNED) + 1')]);
         }
 
         return response()->json(['ok' => true]);

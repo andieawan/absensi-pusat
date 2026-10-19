@@ -94,6 +94,9 @@ class AdminService
             throw new UserError('Akun Superadmin hanya dapat diubah oleh Superadmin.');
         }
         $u->update(['is_active' => ! $u->is_active]);
+        if ($u->pusat_uuid !== null && \Illuminate\Support\Facades\Schema::hasTable('pusat_state')) {
+            \Illuminate\Support\Facades\DB::table('pusat_state')->where('kunci', 'dc:'.$u->pusat_uuid)->delete(); // keputusan admin menggantikan pencabutan otomatis
+        }
         Audit::log($u->is_active ? 'Aktifkan Akun' : 'Nonaktifkan Akun', 'Akun Guru', $actor->nama, $u->username);
 
         return $u->is_active;
