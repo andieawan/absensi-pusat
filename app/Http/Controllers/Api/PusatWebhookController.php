@@ -32,20 +32,28 @@ class PusatWebhookController extends Controller
         if ($id === '' || $event === '') {
             return response()->json(['ok' => false, 'error' => 'header_kurang'], 422);
         }
-        $baru = DB::table('pusat_webhook')->insertOrIgnore(['delivery_id' => $id, 'event' => $event, 'created_at' => now('UTC')->format('Y-m-d H:i:s')]);
+        // Catat nomor kiriman DAN proses dalam satu transaksi: bila proses gagal, catatan ikut batal sehingga
+        // pengiriman ulang dari Pusat diproses lagi (bukan dianggap duplikat lalu hilang).
+        $baru = DB::transaction(function () use ($id, $event, $request) {
+            $baru = DB::table('pusat_webhook')->insertOrIgnore(['delivery_id' => $id, 'event' => $event, 'created_at' => now('UTC')->format('Y-m-d H:i:s')]);
+            if (! $baru) {
+                return false;
+            }
+            $data = (array) $request->json('data', []);
+            if (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
+                PusatAkun::cabutBilaPerlu($data);
+            } elseif (preg_match('/^(siswa|kelas|jurusan|tahun_ajaran)\./', $event)) {
+                DB::table('pusat_state')->insertOrIgnore(['kunci' => 'perubahan_menunggu', 'nilai' => '0', 'updated_at' => now('UTC')->format('Y-m-d H:i:s')]);
+                DB::table('pusat_state')->where('kunci', 'perubahan_menunggu')->update(['nilai' => DB::raw('CAST(nilai AS UNSIGNED) + 1')]);
+            }
+
+            return true;
+        });
         if (! $baru) {
             return response()->json(['ok' => true, 'duplikat' => true]); // pengiriman ulang: sudah diproses
         }
         // Simpan secukupnya (bersihkan entri lama agar tabel tidak membengkak).
         DB::table('pusat_webhook')->where('created_at', '<', now('UTC')->subDays(7)->format('Y-m-d H:i:s'))->delete();
-
-        $data = (array) $request->json('data', []);
-        if (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
-            PusatAkun::cabutBilaPerlu($data);
-        } elseif (preg_match('/^(siswa|kelas|jurusan|tahun_ajaran)\./', $event)) {
-            DB::table('pusat_state')->insertOrIgnore(['kunci' => 'perubahan_menunggu', 'nilai' => '0', 'updated_at' => now('UTC')->format('Y-m-d H:i:s')]);
-            DB::table('pusat_state')->where('kunci', 'perubahan_menunggu')->update(['nilai' => DB::raw('CAST(nilai AS UNSIGNED) + 1')]);
-        }
 
         return response()->json(['ok' => true]);
     }
