@@ -30,6 +30,13 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Http\Middleware\TrustProxies::at('*'); // di balik Cloudflare / reverse proxy
         }
 
+        // Alamat aset/tautan selalu https bila APP_URL https (produksi), walau header proxy tidak terbaca.
+        // Matikan dengan APP_FORCE_HTTPS=false (mis. uji lewat http://IP-VM).
+        $paksa = env('APP_FORCE_HTTPS');
+        if ($paksa === null ? (app()->environment('production') && str_starts_with((string) config('app.url'), 'https://')) : filter_var($paksa, FILTER_VALIDATE_BOOLEAN)) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         Gate::define('admin', fn (User $u) => $u->isAdmin());
         Gate::define('bk', fn (User $u) => $u->hasRole('bk', 'admin', 'superadmin'));
         Gate::define('tu', fn (User $u) => $u->hasRole('tu', 'admin', 'superadmin'));
