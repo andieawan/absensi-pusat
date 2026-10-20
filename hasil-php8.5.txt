@@ -1,0 +1,6 @@
+
+   ERROR  Command "test" is not defined. Did you mean one of these?  
+
+  ⇂ make:test  
+  ⇂ schedule:test  
+
