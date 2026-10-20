@@ -103,7 +103,8 @@ class PusatTest extends TestCase
         $this->assertSame('guru.baru', $u->username);
         $this->assertNotEmpty($u->password_hash);
         $this->post('/logout');
-        $this->post('/login', ['username' => 'guru.baru', 'password' => ''])->assertSessionHasErrors('username');
+        // Password acak yang tidak pernah diberitahukan: tebakan apa pun ditolak.
+        $this->post('/login', ['username' => 'guru.baru', 'password' => 'tebakan-apa-saja-123'])->assertSessionHasErrors('username');
     }
 
     public function test_superadmin_lokal_tidak_diturunkan_oleh_pusat(): void
@@ -273,6 +274,7 @@ class PusatTest extends TestCase
         $this->assertTrue($this->wali->fresh()->is_active);
 
         $this->guru->update(['pusat_uuid' => 'u-3', 'is_active' => false]); // dinonaktifkan manual oleh admin
+        auth()->logout(); // login berikutnya sebagai tamu
         $this->loginViaPusat($this->info(['sub' => 'u-3', 'username' => $this->guru->username, 'peran' => ['guru']]))->assertRedirect(route('login'));
         $this->assertFalse($this->guru->fresh()->is_active);
     }
