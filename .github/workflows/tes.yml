@@ -44,7 +44,7 @@ jobs:
         id: tes
         run: |
           set -o pipefail
-          php artisan test --colors=never 2>&1 | tee hasil.txt
+          vendor/bin/phpunit --colors=never 2>&1 | tee hasil.txt
 
       - name: Simpan hasil ke cabang hasil-tes
         if: always() && github.event_name != 'pull_request'
