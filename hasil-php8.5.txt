@@ -4,18 +4,11 @@ Runtime:       PHP 8.5.12
 Configuration: /home/runner/work/absensi-pusat/absensi-pusat/phpunit.xml
 
 DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD  63 / 192 ( 32%)
-DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDFDDDDD 126 / 192 ( 65%)
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD 126 / 192 ( 65%)
 DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD 189 / 192 ( 98%)
 DDD                                                             192 / 192 (100%)
 
-Time: 00:07.857, Memory: 72.50 MB
+Time: 00:04.864, Memory: 72.50 MB
 
-There was 1 failure:
-
-1) Tests\Feature\ProxyTest::test_proxy_tidak_tepercaya_diabaikan
-Failed asserting that true is false.
-
-/home/runner/work/absensi-pusat/absensi-pusat/tests/Feature/ProxyTest.php:36
-
-FAILURES!
-Tests: 192, Assertions: 1408, Failures: 1, Deprecations: 1.
+OK, but there were issues!
+Tests: 192, Assertions: 1409, Deprecations: 1.
