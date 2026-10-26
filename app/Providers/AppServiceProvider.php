@@ -26,13 +26,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Proxy tepercaya dari config (lihat config/app.php: trusted_proxies).
+        if ($proxi = trim((string) config('app.trusted_proxies'))) {
+            \Illuminate\Http\Middleware\TrustProxies::at($proxi === '*' ? '*' : array_map('trim', explode(',', $proxi)));
+        }
         if (config('absensi.trust_proxies')) {
             \Illuminate\Http\Middleware\TrustProxies::at('*'); // di balik Cloudflare / reverse proxy
         }
 
         // Alamat aset/tautan selalu https bila APP_URL https (produksi), walau header proxy tidak terbaca.
         // Matikan dengan APP_FORCE_HTTPS=false (mis. uji lewat http://IP-VM).
-        $paksa = env('APP_FORCE_HTTPS');
+        $paksa = config('app.force_https');
         if ($paksa === null ? (app()->environment('production') && str_starts_with((string) config('app.url'), 'https://')) : filter_var($paksa, FILTER_VALIDATE_BOOLEAN)) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }

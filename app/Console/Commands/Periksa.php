@@ -69,7 +69,7 @@ class Periksa extends Command
                 $this->peringatkan('APP_URL menunjuk alamat lokal', 'Isi domain asli');
             }
         }
-        env('TRUSTED_PROXIES') ? $this->ok('TRUSTED_PROXIES = '.env('TRUSTED_PROXIES')) : $this->peringatkan('TRUSTED_PROXIES kosong', 'Jika di belakang NPMplus, isi IP-nya agar HTTPS & IP pengunjung terbaca benar');
+        config('app.trusted_proxies') ? $this->ok('TRUSTED_PROXIES = '.config('app.trusted_proxies')) : $this->peringatkan('TRUSTED_PROXIES kosong', 'Jika di belakang NPMplus, isi IP-nya agar HTTPS & IP pengunjung terbaca benar');
 
         if (! $this->option('cepat')) {
             $this->newLine();

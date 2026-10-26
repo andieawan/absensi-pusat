@@ -54,6 +54,13 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Reverse proxy (NPMplus/Cloudflare) yang dipercaya: '*' atau daftar IP dipisah koma.
+    // Dibaca lewat config (bukan env() di bootstrap) agar tetap berlaku setelah `php artisan config:cache`.
+    'trusted_proxies' => env('TRUSTED_PROXIES'),
+
+    // Paksa tautan https (null = otomatis bila APP_ENV=production dan APP_URL https).
+    'force_https' => env('APP_FORCE_HTTPS'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
