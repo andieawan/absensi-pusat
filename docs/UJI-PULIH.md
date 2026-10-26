@@ -9,6 +9,7 @@ Backup baru terbukti berguna setelah pernah berhasil dipulihkan. Lakukan **uji p
 | Pusat | `deploy/backup.sh` (cron `/etc/cron.d/pusat-backup`) | `/var/backups/pusat/pusat_*.sql.gz` | 01:15 |
 | Absensi | `php artisan absensi:backup` (penjadwal Laravel) | `storage/app/backups/absensi_*.sql` | 02:00 |
 | BK | `deploy/backup.sh` (cron `/etc/cron.d/bk-backup`, dipasang otomatis oleh install/update) | `/var/backups/bk-pusat/` (`db_*.sql.gz` + `berkas_*.tar.gz`) | 01:30 |
+| TU | `deploy/backup.sh` (cron `/etc/cron.d/tu-backup`, dipasang otomatis oleh install/update) | `/var/backups/tu-pusat/` (`db_*.sql.gz` + `berkas_*.tar.gz`) | 01:30 |
 | Website | `deploy/backup.sh` (cron `/etc/cron.d/smkibu-backup`) | `/var/backups/smkibu/` (`db_*` + foto) | 01:30 |
 
 Periksa cron backup ada: `ls /etc/cron.d/`. Bila belum ada untuk Pusat/Website, lihat panduan VM masing-masing.

@@ -1,4 +1,8 @@
 {{-- Kartu "Absen Hari Ini" untuk guru & staf. Menampilkan dirinya sendiri hanya bila fitur aktif untuk pengguna ini. --}}
+@if(config('absensi.tu_url') && auth()->user()?->can('absen-mandiri'))
+    {{-- Absen guru & staf sudah pindah ke aplikasi TU --}}
+    <a class="card quick-item" style="display:flex" href="{{ rtrim(config('absensi.tu_url'), '/') }}/absen-saya"><span class="bk-ic" aria-hidden="true">🕘</span><span><b>Absen Guru &amp; Staf</b><small>Absen masuk/pulang sekarang di aplikasi Tata Usaha</small></span></a>
+@else
 @php
     $sc = \App\Services\StaffService::state(auth()->user());
 @endphp
@@ -50,4 +54,5 @@
         @if($row && $row->jarak !== null) Jarak saat masuk: {{ $row->jarak }} m.@endif
     </small>
 </section>
+@endif
 @endif

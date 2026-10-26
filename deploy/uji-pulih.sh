@@ -32,7 +32,7 @@ SQL="${DB_ADMIN_CMD:-$CLI}"
 FILE="${1:-}"
 if [ -z "$FILE" ]; then
   ABS_DIR="$(envval ABSENSI_BACKUP_DIR)"; ABS_DIR="${ABS_DIR:-$APP/storage/app/backups}"
-  FILE="$(ls -1t /var/backups/pusat/pusat_*.sql.gz "$ABS_DIR"/absensi_*.sql /var/backups/bk-pusat/db_*.sql.gz \
+  FILE="$(ls -1t /var/backups/pusat/pusat_*.sql.gz "$ABS_DIR"/absensi_*.sql /var/backups/bk-pusat/db_*.sql.gz /var/backups/tu-pusat/db_*.sql.gz \
             /var/backups/smkibu/db_*.sql.gz 2>/dev/null | head -1 || true)"
 fi
 [ -n "$FILE" ] && [ -f "$FILE" ] || { merah "GAGAL: tidak ada berkas backup. Jalankan deploy/backup.sh dulu (atau periksa cron backup)."; exit 1; }

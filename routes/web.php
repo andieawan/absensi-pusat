@@ -84,7 +84,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::get('/bk/catatan/{jenis}/{record}/berkas', [BkRecordController::class, 'file'])->name('bk.records.file');
     });
 
-    Route::middleware('can:absen-mandiri')->group(function () {
+    Route::middleware(['tu.alih', 'can:absen-mandiri'])->group(function () {
         Route::get('/absen-saya', [SelfCheckController::class, 'index'])->name('selfcheck');
         Route::post('/absen-saya', [SelfCheckController::class, 'store'])->name('selfcheck.store');
     });
@@ -103,7 +103,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::get('/unduh/bk', [ExportController::class, 'bk'])->middleware('can:bk')->name('export.bk');
 
     // ---- Tata Usaha (TU): lihat = TU/Kepsek/Admin, ubah = TU/Admin ----
-    Route::prefix('tu')->name('tu.')->group(function () {
+    Route::prefix('tu')->name('tu.')->middleware('tu.alih')->group(function () {
         Route::middleware('can:tu-lihat')->group(function () {
             Route::get('/', Tu\HomeController::class)->name('home');
             Route::get('/mutasi', [Tu\MutasiController::class, 'index'])->name('mutasi');
