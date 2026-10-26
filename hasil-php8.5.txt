@@ -8,7 +8,7 @@ DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD 126 / 192 ( 65%)
 DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD 189 / 192 ( 98%)
 DDD                                                             192 / 192 (100%)
 
-Time: 00:04.864, Memory: 72.50 MB
+Time: 00:06.751, Memory: 72.50 MB
 
 OK, but there were issues!
 Tests: 192, Assertions: 1409, Deprecations: 1.
