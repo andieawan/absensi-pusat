@@ -10,7 +10,7 @@ use Throwable;
 /** Backup database: MySQL → dump SQL murni PHP (tanpa exec, cocok shared hosting); SQLite → VACUUM INTO. */
 class BackupService
 {
-    private const SKIP = ['sessions', 'login_attempts', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs', 'migrations'];
+    private const SKIP = ['sessions', 'login_attempts', 'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs']; // tabel migrations IKUT dicadangkan: pemulihan ke server baru butuh catatan migrasi
 
     public static function dir(): string
     {
