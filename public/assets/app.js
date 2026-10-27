@@ -420,3 +420,21 @@
     document.body.appendChild(back); inp.focus();
   });
 })();
+
+/* Baris tab yang bisa digeser: tab aktif digulir ke tampilan, dan beri penanda bila masih ada menu di kanan. */
+(function () {
+  'use strict';
+  var bars = document.querySelectorAll('.tabs, .seg-scroll');
+  var cek = function (b) {
+    var bisa = b.scrollWidth > b.clientWidth + 4;
+    b.classList.toggle('bisa-geser', bisa);
+    b.classList.toggle('ujung', !bisa || b.scrollLeft + b.clientWidth >= b.scrollWidth - 4);
+  };
+  Array.prototype.forEach.call(bars, function (b) {
+    var on = b.querySelector('.on,[aria-current="page"]');
+    if (on && b.scrollWidth > b.clientWidth) b.scrollLeft = Math.max(0, on.offsetLeft - b.clientWidth / 2 + on.offsetWidth / 2);
+    cek(b);
+    b.addEventListener('scroll', function () { cek(b); }, { passive: true });
+  });
+  window.addEventListener('resize', function () { Array.prototype.forEach.call(bars, cek); });
+})();

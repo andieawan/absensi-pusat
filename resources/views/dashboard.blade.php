@@ -5,7 +5,7 @@
     $title = match ($variant) {
         'wali' => 'Wali Kelas · '.($class->name ?? '-'),
         'sekolah' => 'Dashboard Sekolah',
-        default => 'Guru Mapel · '.($subject->name ?? '-'),
+        default => isset($subject->name) ? 'Guru Mapel · '.$subject->name : 'Per Mapel',
     };
     $q = fn (array $o = []) => route('dashboard', array_filter(array_merge(['v' => $variant, 'class' => $variant === 'wali' ? null : $classId, 'subject' => $variant === 'mapel' ? $subjectId : null, 'cat' => $cat === 'all' ? null : $cat], $o), fn ($v) => $v !== null));
 @endphp
@@ -28,7 +28,7 @@
                 @foreach($classes as $c)<option value="{{ $c->id }}" @selected($c->id === $classId)>{{ $c->name }} ({{ $c->jurusan }})</option>@endforeach
             </select>
         @endif
-        @if($variant === 'mapel')
+        @if($variant === 'mapel' && $subjects->isNotEmpty())
             <select name="subject" data-auto aria-label="Pilih mata pelajaran" style="width:auto">
                 @foreach($subjects as $s)<option value="{{ $s->id }}" @selected($s->id === $subjectId)>{{ $s->name }}</option>@endforeach
             </select>

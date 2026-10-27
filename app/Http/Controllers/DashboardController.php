@@ -29,13 +29,15 @@ class DashboardController extends Controller
         if ($isWali) {
             $variants['wali'] = 'Wali Kelas';
         }
-        if ($u->hasRole('guru', 'admin', 'superadmin')) {
+        if ($u->hasRole('guru') || ($u->hasRole('admin', 'superadmin') && $subjects->isNotEmpty())) {
             $variants['mapel'] = 'Per Mapel';
         }
         if ($u->can('lihat-sekolah') || ! $variants) {
-            $variants['sekolah'] = 'Sekolah (Kepsek)';
+            $variants['sekolah'] = 'Seluruh Sekolah';
         }
-        $default = $isWali ? 'wali' : ($u->hasRole('kepsek') && isset($variants['sekolah']) ? 'sekolah' : array_key_first($variants));
+        // Kepala sekolah, BK, dan admin yang tidak mengajar langsung melihat gambaran seluruh sekolah.
+        $lihatSekolah = isset($variants['sekolah']) && ($u->hasRole('kepsek', 'bk') || ! $u->hasRole('guru'));
+        $default = $isWali ? 'wali' : ($lihatSekolah ? 'sekolah' : array_key_first($variants));
         $variant = isset($variants[$request->query('v')]) ? $request->query('v') : $default;
 
         $classId = $request->has('class') ? (int) $request->query('class') : ($isWali ? $u->kelas_wali_id : (int) $classes->first()?->id);

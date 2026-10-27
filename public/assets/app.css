@@ -337,3 +337,24 @@ html,body{max-width:100%}body{overflow-x:clip}
 .letter .izin{font-size:11pt}.letter .izin .sp{height:44px}
 @media(max-width:640px){.letter .kop2 img{width:52px;height:52px}.letter .kop2 .k2{font-size:10pt}.letter .kop2 .k1,.letter .kop2 .k3{font-size:8pt}.letter .kop2 .k4{font-size:7pt}.letter .ttd2{flex-direction:column;gap:6px}}
 @page{size:A4;margin:14mm 16mm}
+
+/* ==========================================================================
+   Identitas per aplikasi (warna & ikon berbeda agar pengguna tahu sedang di aplikasi mana).
+   <body data-app="bk|tu|pkl">; Absensi memakai warna bawaan (indigo). Semua warna lolos kontras AA di atas putih.
+   ========================================================================== */
+body[data-app=bk]{--pri:#be185d;--pri-d:#9d174d;--pri-bg:#fdf2f8;--pri-line:#fbcfe8}
+body[data-app=tu]{--pri:#c2410c;--pri-d:#9a3412;--pri-bg:#fff7ed;--pri-line:#fed7aa}
+body[data-app=pkl]{--pri:#0f766e;--pri-d:#115e59;--pri-bg:#f0fdfa;--pri-line:#99f6e4}
+body.bare[data-app=bk]{background:#f5f7fb linear-gradient(180deg,#fdf2f8 0,#f5f7fb 320px) no-repeat}
+body.bare[data-app=tu]{background:#f5f7fb linear-gradient(180deg,#fff7ed 0,#f5f7fb 320px) no-repeat}
+body.bare[data-app=pkl]{background:#f5f7fb linear-gradient(180deg,#f0fdfa 0,#f5f7fb 320px) no-repeat}
+
+/* Menu utama di HP untuk aplikasi tanpa navigasi bawah: baris tab yang bisa digeser di bawah judul. */
+@media(max-width:760px){
+  body:not(.has-bottom-nav) .nav-in{flex-wrap:wrap;row-gap:4px;padding-bottom:6px}
+  body:not(.has-bottom-nav) .tabs{display:flex;order:3;flex:1 0 100%;margin:0 -16px;padding:2px 12px 0;scroll-padding:0 16px}
+  body:not(.has-bottom-nav) .tabs a{min-height:40px;padding:8px 12px;font-size:13.5px}
+}
+/* Penanda "masih ada menu di kanan" pada baris tab yang bisa digeser */
+.tabs.bisa-geser,.seg-scroll.bisa-geser{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
+.tabs.bisa-geser.ujung,.seg-scroll.bisa-geser.ujung{-webkit-mask-image:none;mask-image:none}

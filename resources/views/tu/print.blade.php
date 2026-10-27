@@ -2,7 +2,7 @@
 @section('content')
 @include('tu._tabs', ['h' => 'Cetak Dokumen', 'sub' => 'Pilih dokumen, lalu Cetak / Simpan sebagai PDF dari halaman pratinjau.'])
 <div class="grid g3" style="align-items:start">
-    <form method="get" action="{{ route('tu.print.sheet') }}" class="card" target="_blank"><h2>🗓 Daftar Hadir Kosong</h2><p class="mut" style="font-size:13px">Kolom tanggal satu bulan (hari Minggu dilewati) untuk diisi manual.</p>
+    <form method="get" action="{{ route('tu.print.sheet') }}" class="card" target="_blank"><h2>📅 Daftar Hadir Kosong</h2><p class="mut" style="font-size:13px">Kolom tanggal satu bulan (hari Minggu dilewati) untuk diisi manual.</p>
         <div class="field"><label for="a-kelas">Kelas</label><select id="a-kelas" name="class" required>@foreach($classes as $c)<option value="{{ $c->id }}">{{ $c->name }} ({{ $c->aktif_count }})</option>@endforeach</select></div>
         <div class="field"><label for="a-bulan">Bulan</label><input id="a-bulan" type="month" name="bulan" value="{{ $bulan }}"></div>
         <button class="btn btn-pri">Buka Pratinjau</button></form>
