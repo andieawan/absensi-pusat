@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Services\Audit;
 use App\Services\PusatKlien;
 use App\Services\PusatSync;
 use Illuminate\Http\Request;
 
-/** Admin → Integrasi Pusat: uji koneksi, periksa perubahan (simulasi), terapkan sinkron data induk. */
+/** Admin → Integrasi Pusat: uji koneksi dan sinkron data induk (tampilan sama dengan aplikasi lain). */
 class PusatController extends Controller
 {
     public function index()
@@ -16,15 +18,18 @@ class PusatController extends Controller
         $siap = PusatKlien::siap();
 
         return view('admin.pusat', [
-            'aktif' => PusatKlien::aktif(),
-            'siap' => $siap,
-            'url' => config('pusat.url'),
-            'callback' => route('sso.callback'),
-            'webhook' => url('/api/pusat/webhook'),
-            'terakhir' => $siap ? PusatKlien::baca('sinkron_terakhir') : null,
-            'ringkasan' => $siap ? json_decode((string) PusatKlien::baca('sinkron_ringkasan'), true) : null,
-            'menunggu' => $siap ? (int) PusatKlien::baca('perubahan_menunggu', 0) : 0,
-            'otomatis' => (bool) config('pusat.sinkron_otomatis'),
+            'p' => [
+                'aktif' => PusatKlien::aktif(), 'siap' => $siap, 'url' => config('pusat.url'),
+                'callback' => route('sso.callback'), 'webhook' => url('/api/pusat/webhook'),
+                'tahun' => $siap ? PusatKlien::baca('tahun_aktif') : null,
+                'terakhir' => $siap ? PusatKlien::baca('sinkron_terakhir') : null,
+                'jumlah' => ['kelas' => SchoolClass::count(), 'siswa aktif' => Student::active()->count(),
+                    'siswa belum tertaut Pusat' => $siap ? Student::active()->whereNull('pusat_uuid')->count() : 0],
+                'perluSinkron' => $siap && (int) PusatKlien::baca('perubahan_menunggu', 0) > 0,
+                'otomatis' => (bool) config('pusat.sinkron_otomatis'),
+                'ruteUji' => route('admin.pusat.uji'), 'ruteSinkron' => route('admin.pusat.terapkan'),
+                'catatan' => 'Tidak ada data yang dihapus: siswa yang keluar/hilang di Pusat hanya diberi status "keluar", riwayat absensi tetap ada. Mapel, pasangan mapel, wali kelas, dan nilai tidak disentuh.',
+            ],
         ]);
     }
 
@@ -69,12 +74,25 @@ class PusatController extends Controller
                 report($e);
             }
 
-            return back()->with('error', 'Sinkron gagal, tidak ada data yang berubah: '.mb_substr($e->getMessage(), 0, 300));
+            return back()->with('error', 'Sinkron gagal, tidak ada data yang berubah: '.mb_substr($e->getMessage(), 0, 300))
+                ->with('butuh_paksa', $terapkan && ! $paksa && str_contains($e->getMessage(), 'Tetap terapkan'));
         }
         if ($terapkan) {
             Audit::log('Terapkan Sinkron Pusat', 'Integrasi Pusat', $this->me()->nama, 'Dijalankan manual dari Admin');
         }
 
-        return back()->with('success', $terapkan ? 'Sinkron selesai dan diterapkan.' : 'Simulasi selesai — belum ada data yang diubah.')->with('pusat_hasil', $hasil);
+        // Catatan rinci yang dulu tampil di tabel → jadi peringatan agar kartu hasil sama di semua aplikasi.
+        $s = $hasil['siswa'] ?? [];
+        $k = $hasil['kelas'] ?? [];
+        foreach (array_filter([
+            ! empty($k['ambigu']) ? 'Nama kelas kembar di Absensi (dilewati): '.implode(', ', $k['ambigu']).'.' : null,
+            ! empty($k['hilang']) ? 'Kelas tidak ada lagi di Pusat (dibiarkan): '.implode(', ', $k['hilang']).'.' : null,
+            ! empty($s['ambigu']) ? 'NIS kembar di Absensi (dilewati): '.implode(', ', array_slice($s['ambigu'], 0, 10)).'.' : null,
+            ! empty($s['hanya_lokal']) ? $s['hanya_lokal'].' siswa aktif di Absensi belum ada di Pusat (tidak diubah).' : null,
+        ]) as $w) {
+            $hasil['peringatan'][] = $w;
+        }
+
+        return back()->with('success', $terapkan ? 'Sinkron selesai.' : 'Simulasi selesai — belum ada data yang diubah.')->with('hasil', $hasil);
     }
 }

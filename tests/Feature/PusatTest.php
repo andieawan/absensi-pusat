@@ -155,7 +155,7 @@ class PusatTest extends TestCase
         ]);
         $this->actingAs($this->admin);
 
-        $this->post('/admin/pusat/periksa')->assertSessionHas('pusat_hasil', fn ($h) => $h['siswa']['baru'] === 1 && $h['siswa']['ubah'] === 1 && ! $h['diterapkan']);
+        $this->post('/admin/pusat/periksa')->assertSessionHas('hasil', fn ($h) => $h['siswa']['baru'] === 1 && $h['siswa']['ubah'] === 1 && ! $h['diterapkan']);
         $this->assertSame(6, Student::count());
         $this->assertNull(Student::find(1)->pusat_uuid);
         $this->assertNull(SchoolClass::find(1)->pusat_uuid);
@@ -178,7 +178,7 @@ class PusatTest extends TestCase
         $this->actingAs($this->admin)->post('/admin/pusat/terapkan');
         $this->assertSame('Bu Sari', Student::find(1)->nama_ortu);
 
-        $this->post('/admin/pusat/terapkan')->assertSessionHas('pusat_hasil', fn ($h) => $h['siswa']['baru'] === 0 && $h['siswa']['ubah'] === 0 && $h['kelas']['ubah'] === 0);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['siswa']['baru'] === 0 && $h['siswa']['ubah'] === 0 && $h['kelas']['ubah'] === 0);
     }
 
     public function test_siswa_hilang_di_pusat_diberi_status_keluar_bukan_dihapus(): void
@@ -206,7 +206,7 @@ class PusatTest extends TestCase
         $ada = array_map(fn ($i) => $this->siswaPusat("b-$i", "B-$i"), range(10, 27));
         $ada[] = $this->siswaPusat('x1', 'N-1');
         $this->fakePusat($ada);
-        $this->post('/admin/pusat/terapkan')->assertSessionHas('error');
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('error')->assertSessionHas('butuh_paksa', true);
         $this->assertSame(0, Student::where('status', 'keluar')->count());
         $this->post('/admin/pusat/terapkan', ['paksa' => 1])->assertSessionHas('success');
         $this->assertGreaterThan(10, Student::where('status', 'keluar')->count());
@@ -216,7 +216,7 @@ class PusatTest extends TestCase
     {
         $this->actingAs($this->wali)->get('/admin/pusat')->assertForbidden();
         $this->actingAs($this->wali)->post('/admin/pusat/terapkan')->assertForbidden();
-        $this->actingAs($this->admin)->get('/admin/pusat')->assertOk()->assertSee('Uji Koneksi');
+        $this->actingAs($this->admin)->get('/admin/pusat')->assertOk()->assertSee('Uji koneksi')->assertSee('Sinkron sekarang');
     }
 
     // ---- Webhook ----

@@ -62,6 +62,7 @@ class PusatSync
             DB::commit();
             $this->hasil['diterapkan'] = true;
             PusatKlien::simpan('sinkron_terakhir', now('UTC')->format('Y-m-d H:i:s'));
+            PusatKlien::simpan('tahun_aktif', $aktif['nama']);
             PusatKlien::simpan('sinkron_ringkasan', array_diff_key($this->hasil, ['contoh' => 1]));
             PusatKlien::simpan('perubahan_menunggu', 0);
             Audit::log('Sinkron Pusat', 'Integrasi Pusat', null, sprintf(
@@ -239,7 +240,7 @@ class PusatSync
         if ($nonaktif > $batas) {
             $pesan = "Perubahan menonaktifkan {$nonaktif} siswa sekaligus (batas aman {$batas}). Periksa data di Pusat.";
             if ($terapkan && ! $paksa) {
-                throw new RuntimeException($pesan.' Centang "tetap terapkan" bila memang benar.');
+                throw new RuntimeException($pesan.' Klik "Tetap terapkan" bila memang benar.');
             }
             $this->hasil['peringatan'][] = $pesan;
         }
