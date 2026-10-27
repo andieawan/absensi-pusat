@@ -104,6 +104,17 @@ class AdminService
 
     public static function saveStudent(User $actor, ?Student $s, array $in, bool $audit = true): Student
     {
+        // Bila tersambung ke Pusat, data induk siswa hanya diubah di Pusat (atau lewat aplikasi TU), agar semua aplikasi sama
+        // dan perubahan lokal tidak tertimpa sinkron berikutnya. Kontak orang tua tetap boleh dilengkapi di sini.
+        if (\App\Services\PusatKlien::kelolaSiswa()) {
+            if ($s === null) {
+                throw new UserError('Data siswa dikelola Pusat Sekolah: tambahkan siswa di Pusat (atau Mutasi Masuk di aplikasi TU). Siswa baru tersalin otomatis ke Absensi.');
+            }
+            if ($s->pusat_uuid !== null && (trim((string) $in['nama']) !== $s->nama || ($in['jk'] ?? $s->jk) !== $s->jk
+                || (int) $in['class_id'] !== (int) $s->class_id || ($in['status'] ?? $s->status) !== $s->status)) {
+                throw new UserError('Nama, jenis kelamin, kelas, dan status siswa dikelola Pusat Sekolah — ubah di Pusat (atau Mutasi di aplikasi TU). Di sini hanya kontak orang tua yang bisa diubah.');
+            }
+        }
         if (! SchoolClass::whereKey($in['class_id'])->exists()) {
             throw new UserError('Kelas tidak valid.');
         }
@@ -181,6 +192,9 @@ class AdminService
 
     public static function importStudents(User $actor, array $hdr, array $rows): array
     {
+        if (\App\Services\PusatKlien::kelolaSiswa()) {
+            throw new UserError('Data siswa dikelola Pusat Sekolah: impor siswa dilakukan di Pusat, lalu tersalin otomatis ke Absensi.');
+        }
         [$ok, $skip] = DB::transaction(fn () => self::importStudentRows($actor, $hdr, $rows));
         Audit::log('Impor Siswa', 'Siswa', $actor->nama, "$ok siswa ditambahkan, ".count($skip).' baris dilewati');
 

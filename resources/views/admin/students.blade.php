@@ -3,6 +3,9 @@
 @php($rp = request()->routeIs('tu.*') ? 'tu.' : 'admin.')
 @include($rp === 'tu.' ? 'tu._tabs' : 'admin._tabs')
 @php($classOpts = $classes->pluck('name', 'id')->all())
+@if(\App\Services\PusatKlien::kelolaSiswa())
+<div class="alert alert-info"><span class="alert-ic" aria-hidden="true">i</span><span class="alert-txt">Data siswa dikelola <b>Pusat Sekolah</b>. Tambah, ubah nama/kelas/status, impor, dan hapus siswa dilakukan di Pusat (mutasi lewat aplikasi TU), lalu tersalin otomatis. Di sini hanya kontak orang tua yang bisa dilengkapi.</span></div>
+@else
 <div class="grid g2" style="align-items:start">
     <details class="card" @if($errors->any() && old('nis')) open @endif><summary style="cursor:pointer;font-weight:700">+ Tambah Siswa</summary>
         <form method="post" action="{{ route($rp.'students.store') }}" style="margin-top:12px">@csrf
@@ -25,6 +28,7 @@
         </form>
     </details>
 </div>
+@endif
 <form method="get" action="{{ route($rp.'students') }}" class="card">
     <div class="fields">
         <div><label>Cari</label><input type="search" name="q" value="{{ $q }}" placeholder="Nama / NIS"></div>

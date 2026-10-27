@@ -15,6 +15,12 @@ class PusatKlien
         return config('pusat.enabled') && config('pusat.url') !== '' && config('pusat.client_id') !== '' && config('pusat.client_secret') !== '';
     }
 
+    /** Data siswa dikelola Pusat (integrasi aktif): Absensi tidak boleh menambah/mengubah data induk siswa sendiri. */
+    public static function kelolaSiswa(): bool
+    {
+        return self::aktif() && self::siap();
+    }
+
     /** Kolom/tabel penaut sudah ada (migrasi sudah dijalankan). */
     public static function siap(): bool
     {

@@ -192,6 +192,9 @@ class TuService
     /** Siswa keluar (pindah/berhenti/dikeluarkan): ubah status + catatan mutasi; surat pindah opsional. @return array{0:MutasiSiswa,1:?TuSurat} */
     public static function mutasiKeluar(User $u, array $in, bool $buatSurat = false): array
     {
+        if (PusatKlien::kelolaSiswa()) {
+            throw new UserError('Data siswa dikelola Pusat Sekolah: catat mutasi keluar di aplikasi TU (atau ubah status siswa di Pusat).');
+        }
         $s = Student::active()->find((int) ($in['student_id'] ?? 0)) ?? throw new UserError('Pilih siswa aktif terlebih dahulu.');
         $status = (string) ($in['status'] ?? '');
         if (! isset(self::ALASAN_KELUAR[$status])) {

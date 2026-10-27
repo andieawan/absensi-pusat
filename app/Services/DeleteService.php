@@ -61,6 +61,13 @@ class DeleteService
             throw new UserError('Tidak ada siswa yang dipilih.');
         }
         $block = self::studentBlockers($students->keys()->all());
+        if (PusatKlien::kelolaSiswa()) {
+            foreach ($students as $id => $st) {
+                if ($st->pusat_uuid !== null) {
+                    $block[$id][] = 'tautan ke Pusat Sekolah (hapus atau nonaktifkan siswa di Pusat)';
+                }
+            }
+        }
         $ok = $students->keys()->reject(fn ($id) => isset($block[$id]))->values();
         $skipped = [];
         foreach ($students as $id => $s) {
