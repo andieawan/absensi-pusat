@@ -257,6 +257,9 @@ class AdminService
                 $in[$k] = $v; // diatur di Pusat
             }
         }
+        if (PusatKlien::kelolaSiswa() && PusatKlien::baca('semester') !== null) {
+            $in['semester'] = SchoolSetting::current()->semester; // semester diatur di Pusat
+        }
         SchoolSetting::put($staff + [
             'school_name' => trim($in['school_name']),
             'tahun_ajaran' => PusatKlien::kelolaSiswa() ? (string) SchoolSetting::current()->tahun_ajaran : trim((string) ($in['tahun_ajaran'] ?? '')), // Pusat: ikut tahun aktif Pusat

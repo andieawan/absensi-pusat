@@ -34,7 +34,11 @@
             @else
             <div><label>Tahun ajaran</label><input type="text" name="tahun_ajaran" value="{{ old('tahun_ajaran', $settings->tahun_ajaran) }}" placeholder="2026/2027"></div>
             @endif
+            @if(\App\Services\PusatKlien::kelolaSiswa() && \App\Services\PusatKlien::baca('semester') !== null)
+            <div><label>Semester</label><input type="text" value="{{ $settings->semester }}" readonly><input type="hidden" name="semester" value="{{ $settings->semester }}"><small class="hint">Diatur di Pusat → Tahun Ajaran.</small></div>
+            @else
             <div><label>Semester</label>@include('partials.select', ['name' => 'semester', 'options' => ['Ganjil' => 'Ganjil', 'Genap' => 'Genap'], 'selected' => old('semester', $settings->semester)])</div>
+            @endif
         </div>
         <div class="fields" style="margin-top:12px">
             @if($dariPusat('kepsek_nama'))

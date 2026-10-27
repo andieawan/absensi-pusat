@@ -87,4 +87,16 @@ class ProfilKontakPusatTest extends TestCase
         config(['absensi.tu_url' => 'https://tu.test']);
         $this->actingAs($this->admin)->get('/admin/pengaturan')->assertOk()->assertDontSee('Absen Mandiri Guru')->assertSee('diatur di');
     }
+
+    public function test_semester_mengikuti_pusat(): void
+    {
+        SchoolSetting::put(['school_name' => 'SMK', 'semester' => 'Ganjil']);
+        $this->kirim('tahun_ajaran.diperbarui', ['uuid' => 't-1', 'nama' => '2026/2027', 'semester' => 'Genap', 'aktif' => true], 's1')->assertOk();
+        SchoolSetting::forget();
+        $this->assertSame('Genap', SchoolSetting::current()->semester);
+        $this->actingAs($this->admin)->get('/admin/pengaturan')->assertOk()->assertSee('Diatur di Pusat → Tahun Ajaran');
+        $this->put('/admin/pengaturan', ['school_name' => 'SMK', 'semester' => 'Ganjil', 'backup_retention_weeks' => 8]);
+        SchoolSetting::forget();
+        $this->assertSame('Genap', SchoolSetting::current()->semester);
+    }
 }

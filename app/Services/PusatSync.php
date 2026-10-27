@@ -64,6 +64,9 @@ class PusatSync
                     \App\Models\SchoolSetting::put(['tahun_ajaran' => $aktif['nama']]); // tahun ajaran mengikuti Pusat
                     $this->catat('Tahun ajaran aktif: '.$aktif['nama']);
                 }
+                if (self::terapkanSemester($aktif)) {
+                    $this->catat('Semester: '.$aktif['semester']);
+                }
             }
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -86,6 +89,24 @@ class PusatSync
         }
 
         return $this->hasil;
+    }
+
+    /** Semester berjalan mengikuti tahun ajaran aktif di Pusat. @return bool berubah */
+    public static function terapkanSemester(array $ta): bool
+    {
+        $sem = (string) ($ta['semester'] ?? '');
+        if (empty($ta['aktif']) || ! in_array($sem, ['Ganjil', 'Genap'], true)) {
+            return false;
+        }
+        PusatKlien::simpan('semester', $sem);
+        $set = \App\Models\SchoolSetting::current();
+        if (! $set->exists || $set->semester === $sem) {
+            return false;
+        }
+        \App\Models\SchoolSetting::put(['semester' => $sem]);
+        Audit::log('Semester dari Pusat', 'Integrasi Pusat', null, 'Semester berjalan: '.$sem);
+
+        return true;
     }
 
     private function catat(string $teks): void
