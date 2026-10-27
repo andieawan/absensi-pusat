@@ -20,7 +20,11 @@
         <h2>Pengaturan Sekolah</h2>
         <div class="field"><label>Nama sekolah</label><input type="text" name="school_name" value="{{ old('school_name', $settings->school_name) }}" required></div>
         <div class="fields">
+            @if(\App\Services\PusatKlien::kelolaSiswa())
+            <div><label>Tahun ajaran</label><input type="text" value="{{ $settings->tahun_ajaran }}" readonly aria-readonly="true"><small class="hint">Mengikuti tahun ajaran aktif di Pusat.</small></div>
+            @else
             <div><label>Tahun ajaran</label><input type="text" name="tahun_ajaran" value="{{ old('tahun_ajaran', $settings->tahun_ajaran) }}" placeholder="2026/2027"></div>
+            @endif
             <div><label>Semester</label>@include('partials.select', ['name' => 'semester', 'options' => ['Ganjil' => 'Ganjil', 'Genap' => 'Genap'], 'selected' => old('semester', $settings->semester)])</div>
         </div>
         <div class="fields" style="margin-top:12px">

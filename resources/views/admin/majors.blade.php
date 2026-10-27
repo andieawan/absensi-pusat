@@ -4,7 +4,9 @@
 @if(! $ready)
     <div class="alert alert-warn"><span class="alert-ic" aria-hidden="true">!</span><span class="alert-txt">Fitur ini butuh pembaruan database. Buka <a href="{{ route('admin.settings') }}">Pengaturan → Perbarui Database Sekarang</a>.</span></div>
 @else
-@if($unknown->isNotEmpty())
+@php($induk = \App\Services\PusatKlien::kelolaSiswa())
+@if($induk)@include('admin._induk', ['apa' => 'Jurusan', 'path' => '/admin/data/jurusan', 'ket' => 'Jurusan dan kelas ditambah/diubah di Pusat lalu tersalin otomatis ke Absensi.'])@endif
+@if(! $induk && $unknown->isNotEmpty())
 <div class="alert alert-warn"><span class="alert-ic" aria-hidden="true">!</span><span class="alert-txt">Ada kode jurusan di data kelas yang belum terdaftar: <b>{{ $unknown->implode(', ') }}</b>.
     <form method="post" action="{{ route('admin.majors.sync') }}" class="inline">@csrf<button class="btn btn-sm">Daftarkan otomatis</button></form></span></div>
 @endif
@@ -15,6 +17,7 @@
             @php($cls = $byCode->get(mb_strtoupper($m->kode), collect()))
             <details style="border-top:1px solid var(--line2);padding:8px 0">
                 <summary style="cursor:pointer"><b>{{ $m->kode }}</b>@if($m->nama !== $m->kode) — {{ $m->nama }}@endif <small class="mut">· {{ $cls->count() }} kelas · {{ $cls->sum('aktif_count') }} siswa aktif</small></summary>
+                @unless($induk)
                 <form method="post" action="{{ route('admin.majors.update', $m) }}" style="margin-top:8px">@csrf @method('PUT')
                     <div class="fields">
                         <div><label>Kode</label><input type="text" name="kode" value="{{ $m->kode }}" maxlength="32" required></div>
@@ -24,10 +27,12 @@
                     <button class="btn btn-sm btn-pri">Simpan</button>
                 </form>
                 <form method="post" action="{{ route('admin.majors.destroy', $m) }}" class="inline" style="margin-top:8px" data-confirm="Hapus jurusan {{ $m->kode }}? Hanya bisa bila tidak dipakai kelas.">@csrf @method('DELETE')<button class="btn btn-sm btn-danger">Hapus jurusan</button></form>
+                @endunless
             </details>
         @empty
             <p class="empty">Belum ada jurusan. Tambahkan di bawah.</p>
         @endforelse
+        @unless($induk)
         <details open style="border-top:1px solid var(--line);padding-top:10px;margin-top:8px"><summary style="cursor:pointer;font-weight:700">+ Tambah jurusan</summary>
             <form method="post" action="{{ route('admin.majors.store') }}" style="margin-top:8px">@csrf
                 <div class="fields">
@@ -36,9 +41,12 @@
                 </div>
                 <button class="btn btn-pri" style="margin-top:8px">Tambah Jurusan</button>
             </form></details>
+        @endunless
     </div>
 
-    <div class="card"><h2>Buat Kelas Sekaligus</h2>
+    <div class="card">
+        @unless($induk)
+        <h2>Buat Kelas Sekaligus</h2>
         @if($majors->isEmpty())
             <p class="hint">Tambahkan jurusan dulu.</p>
         @else
@@ -52,7 +60,8 @@
             <button class="btn btn-pri">Buat Kelas</button>
         </form>
         @endif
-        <h2 style="margin-top:18px">Kelas per Jurusan</h2>
+        @endunless
+        <h2 @style(['margin-top:18px' => ! $induk])>Kelas per Jurusan</h2>
         @foreach($majors as $m)
             @php($cls = $byCode->get(mb_strtoupper($m->kode), collect()))
             <p style="margin:8px 0 2px"><b>{{ $m->kode }}</b> <small class="mut">{{ $cls->count() }} kelas</small></p>

@@ -22,6 +22,8 @@ class PusatSync
 
     private array $hasil;
 
+    private ?bool $adaWali = null;
+
     /** @return array hasil ringkas untuk ditampilkan/dicetak */
     public function jalankan(bool $terapkan, bool $paksa = false): array
     {
@@ -54,6 +56,14 @@ class PusatSync
             $this->jurusan($jurusan);
             $petaKelas = $this->kelas($kelas, $aktif['nama']);
             $this->siswa($siswa, $petaKelas, $tertaut, $paksa, $terapkan);
+            if ($terapkan) {
+                PusatAkun::terapkanWali();
+                $set = \App\Models\SchoolSetting::current();
+                if ($set->exists && $set->tahun_ajaran !== $aktif['nama']) {
+                    \App\Models\SchoolSetting::put(['tahun_ajaran' => $aktif['nama']]); // tahun ajaran mengikuti Pusat
+                    $this->catat('Tahun ajaran aktif: '.$aktif['nama']);
+                }
+            }
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
@@ -129,6 +139,9 @@ class PusatSync
             }
 
             $data = ['name' => $k['nama'], 'jurusan' => $k['jurusan_kode'] ?? null, 'tahun_ajaran' => $k['tahun_ajaran'] ?? null];
+            if ($this->adaWali ??= \Illuminate\Support\Facades\Schema::hasColumn('classes', 'wali_pusat_uuid')) {
+                $data['wali_pusat_uuid'] = $k['wali_uuid'] ?? null;
+            }
             if (! $c) {
                 $c = SchoolClass::create($data + ['pusat_uuid' => $k['uuid']]);
                 $this->hasil['kelas']['baru']++;

@@ -1,6 +1,9 @@
 @extends('layouts.app', ['title' => 'Kenaikan Kelas'])
 @section('content')
 @include('admin._tabs')
+@if(\App\Services\PusatKlien::kelolaSiswa())
+@include('admin._induk', ['apa' => 'Kenaikan kelas dan tahun ajaran', 'path' => '/admin/kenaikan', 'ket' => 'Lakukan kenaikan kelas, kelulusan, dan pergantian tahun ajaran di Pusat → Kenaikan Kelas. Hasilnya tersalin otomatis ke Absensi (riwayat absensi & nilai tidak hilang).'])
+@else
 
 <div class="alert alert-info"><span class="alert-ic" aria-hidden="true">i</span><span class="alert-txt">
     <b>Urutan yang disarankan di akhir tahun ajaran:</b>
@@ -60,4 +63,5 @@
         <button class="btn btn-dark">Mulai Tahun Ajaran Baru</button>
     </form>
 </div>
+@endif
 @endsection

@@ -13,9 +13,12 @@
 @endphp
 <div class="grid g2" style="align-items:start">
     <div class="card"><h2>Kelas</h2>
-        <p class="hint" style="margin:0 0 8px">Mau membuat banyak kelas sekaligus (mis. X RPL 1–3)? Pakai tab <a href="{{ route('admin.majors') }}">Jurusan</a>.</p>
+        @php($induk = \App\Services\PusatKlien::kelolaSiswa())
+        @if($induk)@include('admin._induk', ['apa' => 'Kelas', 'path' => '/admin/data/kelas', 'ket' => 'Nama kelas, jurusan, tingkat, dan wali kelas diatur di Pusat. Mata pelajaran tetap diatur di sini.'])@else
+        <p class="hint" style="margin:0 0 8px">Mau membuat banyak kelas sekaligus (mis. X RPL 1–3)? Pakai tab <a href="{{ route('admin.majors') }}">Jurusan</a>.</p>@endif
         @foreach($classes as $c)
             <details style="border-top:1px solid var(--line2);padding:8px 0"><summary style="cursor:pointer"><b>{{ $c->name }}</b> <small>{{ $c->jurusan }} · {{ $c->students_count }} siswa · {{ $c->tahun_ajaran }} {{ $c->semester }}</small></summary>
+                @unless($induk)
                 <form method="post" action="{{ route('admin.classes.update', $c) }}" style="margin-top:8px">@csrf @method('PUT')
                     <div class="fields">
                         <div><label>Nama</label><input type="text" name="name" value="{{ $c->name }}" required></div>
@@ -25,8 +28,10 @@
                         <div><label>Semester</label>@include('partials.select', ['name' => 'semester', 'options' => $sem, 'selected' => $c->semester])</div>
                     </div><button class="btn btn-sm btn-pri" style="margin-top:8px">Simpan</button>
                 </form>
-                <form method="post" action="{{ route('admin.classes.destroy', $c) }}" class="inline" style="margin-top:8px" data-confirm="Hapus kelas {{ $c->name }}? Hanya bisa bila kelas kosong dan belum punya riwayat.">@csrf @method('DELETE')<button class="btn btn-sm btn-danger">Hapus kelas</button></form></details>
+                <form method="post" action="{{ route('admin.classes.destroy', $c) }}" class="inline" style="margin-top:8px" data-confirm="Hapus kelas {{ $c->name }}? Hanya bisa bila kelas kosong dan belum punya riwayat.">@csrf @method('DELETE')<button class="btn btn-sm btn-danger">Hapus kelas</button></form>
+                @endunless</details>
         @endforeach
+        @unless($induk)
         <details open style="border-top:1px solid var(--line);padding-top:10px;margin-top:8px"><summary style="cursor:pointer;font-weight:700">+ Tambah kelas</summary>
             <form method="post" action="{{ route('admin.classes.store') }}" style="margin-top:8px">@csrf
                 <div class="fields">
@@ -37,6 +42,7 @@
                     <div><label>Semester</label>@include('partials.select', ['name' => 'semester', 'options' => $sem, 'selected' => $settings->semester])</div>
                 </div><button class="btn btn-pri" style="margin-top:8px">Tambah Kelas</button>
             </form></details>
+        @endunless
     </div>
     <div class="card"><h2>Mata Pelajaran</h2>
         @foreach($subjects as $s)

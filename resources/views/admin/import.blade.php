@@ -32,12 +32,16 @@
             <h2 style="margin-top:0">{{ ['①','②','③','④','⑤','⑥','⑦'][$i] }} {{ $t['icon'] }} {{ $t['title'] }}</h2>
             <p class="mut" style="font-size:12.5px;margin:0 0 6px">Kolom: <b>{{ implode(', ', $t['cols']) }}</b></p>
             <ul style="margin:0 0 10px;padding-left:18px;font-size:12.5px" class="mut">@foreach($t['notes'] as $n)<li>{{ $n }}</li>@endforeach</ul>
-            <a class="btn btn-sm" href="{{ route('admin.import.template', $k) }}">⬇ Unduh template</a>
+            @if(in_array($k, ['kelas', 'guru', 'siswa'], true) && \App\Services\PusatKlien::kelolaSiswa())
+            @include('admin._induk', ['apa' => $t['title'], 'path' => $k === 'guru' ? '/admin/akun' : '/admin/impor', 'ket' => $k === 'guru' ? 'Akun guru dibuat di Pusat; akun Absensi terbentuk otomatis saat guru pertama kali masuk lewat Pusat.' : 'Impor lewat Pusat → Impor CSV, lalu tersalin otomatis ke Absensi.'])
+            @else
+            <a class="btn btn-sm" href="{ route('admin.import.template', $k) }">⬇ Unduh template</a>
             <form method="post" enctype="multipart/form-data" action="{{ route('admin.import.run', $k) }}" style="margin-top:12px">@csrf
                 <input type="file" name="file" accept=".xlsx,.csv" required aria-label="Berkas {{ $t['title'] }}">
                 <label class="chk" style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:13px"><input type="checkbox" name="dry" value="1" checked> Cek dulu (jangan simpan)</label>
                 <button class="btn btn-pri" style="margin-top:8px">Unggah &amp; Proses</button>
             </form>
+            @endif
         </div>
     @endforeach
     <div class="card">

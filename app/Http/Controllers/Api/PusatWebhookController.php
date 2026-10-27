@@ -44,6 +44,7 @@ class PusatWebhookController extends Controller
                 \App\Services\Sambungan::tarik(); // gagal → transaksi batal → Pusat mengirim ulang
             } elseif (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
                 PusatAkun::cabutBilaPerlu($data);
+                PusatAkun::tautPegawai($data);
             } elseif (preg_match('/^(siswa|kelas|jurusan|tahun_ajaran)\./', $event)) {
                 DB::table('pusat_state')->insertOrIgnore(['kunci' => 'perubahan_menunggu', 'nilai' => '0', 'updated_at' => now('UTC')->format('Y-m-d H:i:s')]);
                 DB::table('pusat_state')->where('kunci', 'perubahan_menunggu')->update(['nilai' => DB::raw('CAST(nilai AS UNSIGNED) + 1')]);

@@ -45,12 +45,15 @@ class PusatAkun
             }
         }
 
+        $pegawai = is_array($info['pegawai'] ?? null) ? (string) ($info['pegawai']['uuid'] ?? '') : '';
+
         if (! $user) {
             $user = User::create([
                 'username' => $username, 'nama' => (string) ($info['nama'] ?? $username), 'roles' => $peran, 'subjects' => [], 'classes' => [],
                 'password_hash' => Passwords::make(Str::random(48)), // tak diketahui siapa pun: hanya login lewat Pusat
                 'is_active' => true, 'pusat_uuid' => $uuid,
-            ]);
+            ] + (self::adaKolomPegawai() ? ['pegawai_uuid' => $pegawai ?: null] : []));
+            self::terapkanWali();
             Audit::log('Akun dari Pusat', 'Akun Guru', $user->nama, "Akun dibuat otomatis saat login pertama lewat Pusat, peran: ".implode(', ', $peran));
 
             return [$user, null];
@@ -64,6 +67,9 @@ class PusatAkun
         $dulu = collect($user->roles ?? [])->sort()->values()->all();
         $baru = collect($roles)->sort()->values()->all();
         $perubahan = ['pusat_uuid' => $uuid];
+        if (self::adaKolomPegawai() && $user->pegawai_uuid !== ($pegawai ?: null)) {
+            $perubahan['pegawai_uuid'] = $pegawai ?: null;
+        }
         if ($dulu !== $baru) {
             $perubahan['roles'] = $roles;
         }
@@ -71,6 +77,9 @@ class PusatAkun
             $perubahan['nama'] = (string) $info['nama'];
         }
         $user->update($perubahan);
+        if (array_key_exists('pegawai_uuid', $perubahan)) {
+            self::terapkanWali();
+        }
         if (isset($perubahan['roles'])) {
             Audit::log('Peran dari Pusat', 'Akun Guru', $user->nama, 'Peran diselaraskan dengan Pusat: '.implode(', ', $dulu).' → '.implode(', ', $baru));
         }
@@ -90,6 +99,57 @@ class PusatAkun
         }
 
         return array_values(array_unique($hasil));
+    }
+
+    private static function adaKolomPegawai(): bool
+    {
+        static $ada = null;
+        if ($ada === null || app()->runningUnitTests()) {
+            $ada = \Illuminate\Support\Facades\Schema::hasColumn('users', 'pegawai_uuid') && \Illuminate\Support\Facades\Schema::hasColumn('classes', 'wali_pusat_uuid');
+        }
+
+        return $ada;
+    }
+
+    /** Webhook akun: catat pegawai milik akun (untuk wali kelas dari Pusat). */
+    public static function tautPegawai(array $data): void
+    {
+        if (! self::adaKolomPegawai() || ! array_key_exists('pegawai_uuid', $data) || empty($data['uuid'])) {
+            return;
+        }
+        $user = User::where('pusat_uuid', (string) $data['uuid'])->first();
+        $pegawai = $data['pegawai_uuid'] ? (string) $data['pegawai_uuid'] : null;
+        if ($user && $user->pegawai_uuid !== $pegawai) {
+            $user->update(['pegawai_uuid' => $pegawai]);
+            self::terapkanWali();
+        }
+    }
+
+    /**
+     * Wali kelas mengikuti Pusat: kelas yang punya wali di Pusat diberikan ke akun milik pegawai tersebut
+     * (akun lain yang masih tercatat sebagai wali kelas itu dilepas). Kelas tanpa wali di Pusat, atau wali yang
+     * belum punya akun di Absensi, dibiarkan seperti pengaturan lokal.
+     *
+     * @return int jumlah akun yang berubah
+     */
+    public static function terapkanWali(): int
+    {
+        if (! self::adaKolomPegawai()) {
+            return 0;
+        }
+        $n = 0;
+        foreach (\App\Models\SchoolClass::whereNotNull('wali_pusat_uuid')->get(['id', 'name', 'wali_pusat_uuid']) as $c) {
+            $wali = User::where('pegawai_uuid', $c->wali_pusat_uuid)->first();
+            if (! $wali || (int) $wali->kelas_wali_id === (int) $c->id) {
+                continue;
+            }
+            User::where('kelas_wali_id', $c->id)->where('id', '!=', $wali->id)->update(['kelas_wali_id' => null]);
+            $wali->update(['kelas_wali_id' => $c->id]);
+            Audit::log('Wali Kelas dari Pusat', 'Akun Guru', $wali->nama, "Wali kelas {$c->name}");
+            $n++;
+        }
+
+        return $n;
     }
 
     /** Webhook akun: hanya arah AMAN yang diterapkan otomatis (mencabut akses). Perubahan lain menunggu login/sinkron berikutnya. */

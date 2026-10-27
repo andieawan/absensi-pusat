@@ -46,8 +46,11 @@
         $extra = [];
         if ($me->can('absen-mandiri') && \App\Services\StaffService::selfActive()) $extra[] = ['selfcheck', 'Absen Saya', 'Absen Saya', 'i-clock', 'selfcheck'];
         if ($me->can('lihat-sekolah')) $extra[] = ['monitor', 'Pantau', 'Pantau', 'i-eye', 'monitor'];
-        if ($me->can('tu-lihat')) $extra[] = ['tu.home', 'TU', 'TU', 'i-folder', 'tu.*'];
-        if ($me->can('bk-modul')) $extra[] = ['bk.home', 'BK', 'BK', 'i-heart', 'bk*'];
+        // Modul TU/BK sudah menjadi aplikasi sendiri bila alamatnya diisi: tidak ditampilkan lagi di menu Absensi
+        // (bukanya lewat menu akun → Pindah ke aplikasi lain).
+        $appLain = collect((array) session('aplikasi_lain', []))->pluck('kode')->all();
+        if ($me->can('tu-lihat') && ! config('absensi.tu_url') && ! in_array('tu', $appLain, true)) $extra[] = ['tu.home', 'TU', 'TU', 'i-folder', 'tu.*'];
+        if ($me->can('bk-modul') && ! config('absensi.bk_url') && ! in_array('bk', $appLain, true)) $extra[] = ['bk.home', 'BK', 'BK', 'i-heart', 'bk*'];
         if ($me->can('admin')) $extra[] = ['admin.teachers', 'Admin', 'Admin', 'i-gear', 'admin.*'];
         $initial = mb_strtoupper(mb_substr(trim(preg_replace('/^(Dra?\.|Drs\.|Ir\.|H\.|Hj\.)\s*/i', '', $me->nama)), 0, 1));
     @endphp

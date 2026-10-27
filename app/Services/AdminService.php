@@ -64,6 +64,10 @@ class AdminService
 
     public static function updateTeacher(User $actor, User $u, array $in): void
     {
+        if (PusatKlien::kelolaSiswa() && $u->pusat_uuid !== null) {
+            $in['nama'] = $u->nama; // akun Pusat: nama & peran diatur di Pusat; mapel, kelas, dan wali tetap di sini
+            $in['roles'] = $u->roles ?? [];
+        }
         $roles = self::cleanRoles($actor, (array) ($in['roles'] ?? []), $u->roles ?? []);
         if ($u->id === $actor->id && ! array_intersect($roles, ['admin', 'superadmin'])) {
             throw new UserError('Anda tidak dapat mencabut peran Administrator dari akun Anda sendiri.');
@@ -78,6 +82,9 @@ class AdminService
 
     public static function resetPassword(User $actor, User $u, string $pw): void
     {
+        if (PusatKlien::kelolaSiswa() && $u->pusat_uuid !== null) {
+            throw new UserError('Akun ini masuk lewat Pusat Sekolah: password diganti di Pusat.');
+        }
         if ($u->hasRole('superadmin') && ! $actor->hasRole('superadmin')) {
             throw new UserError('Password Superadmin hanya dapat direset oleh Superadmin.');
         }
@@ -241,7 +248,8 @@ class AdminService
             }
         }
         SchoolSetting::put($staff + [
-            'school_name' => trim($in['school_name']), 'tahun_ajaran' => trim((string) ($in['tahun_ajaran'] ?? '')),
+            'school_name' => trim($in['school_name']),
+            'tahun_ajaran' => PusatKlien::kelolaSiswa() ? (string) SchoolSetting::current()->tahun_ajaran : trim((string) ($in['tahun_ajaran'] ?? '')), // Pusat: ikut tahun aktif Pusat
             'semester' => $in['semester'], 'kepsek_nama' => trim((string) ($in['kepsek_nama'] ?? '')),
             'bk_nama' => trim((string) ($in['bk_nama'] ?? '')), 'backup_retention_weeks' => (int) $in['backup_retention_weeks'],
         ]);

@@ -138,7 +138,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::prefix('admin')->name('admin.')->middleware('can:admin')->group(function () {
         Route::redirect('/', '/admin/guru');
         Route::get('/guru', [Admin\TeacherController::class, 'index'])->name('teachers');
-        Route::post('/guru', [Admin\TeacherController::class, 'store'])->name('teachers.store');
+        Route::post('/guru', [Admin\TeacherController::class, 'store'])->name('teachers.store')->middleware('induk.pusat:Akun_guru');
         Route::put('/guru/{user}', [Admin\TeacherController::class, 'update'])->name('teachers.update');
         Route::post('/guru/{user}/reset', [Admin\TeacherController::class, 'reset'])->name('teachers.reset');
         Route::delete('/guru/{user}', [Admin\TeacherController::class, 'destroy'])->name('teachers.destroy');
@@ -152,19 +152,19 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::delete('/siswa/{student}', [Admin\StudentController::class, 'destroy'])->name('students.destroy');
 
         Route::get('/kelas', [Admin\MasterController::class, 'index'])->name('master');
-        Route::post('/kelas', [Admin\MasterController::class, 'storeClass'])->name('classes.store');
-        Route::put('/kelas/{class}', [Admin\MasterController::class, 'updateClass'])->name('classes.update');
-        Route::delete('/kelas/{class}', [Admin\MasterController::class, 'destroyClass'])->name('classes.destroy');
+        Route::post('/kelas', [Admin\MasterController::class, 'storeClass'])->name('classes.store')->middleware('induk.pusat:Kelas');
+        Route::put('/kelas/{class}', [Admin\MasterController::class, 'updateClass'])->name('classes.update')->middleware('induk.pusat:Kelas');
+        Route::delete('/kelas/{class}', [Admin\MasterController::class, 'destroyClass'])->name('classes.destroy')->middleware('induk.pusat:Kelas');
         Route::delete('/mapel/{subject}', [Admin\MasterController::class, 'destroySubject'])->name('subjects.destroy');
         Route::post('/mapel', [Admin\MasterController::class, 'storeSubject'])->name('subjects.store');
         Route::put('/mapel/{subject}', [Admin\MasterController::class, 'updateSubject'])->name('subjects.update');
 
         Route::get('/jurusan', [Admin\MajorController::class, 'index'])->name('majors');
-        Route::post('/jurusan', [Admin\MajorController::class, 'store'])->name('majors.store');
-        Route::post('/jurusan/sinkron', [Admin\MajorController::class, 'sync'])->name('majors.sync');
-        Route::post('/jurusan/kelas', [Admin\MajorController::class, 'makeClasses'])->name('majors.classes');
-        Route::put('/jurusan/{jurusan}', [Admin\MajorController::class, 'update'])->name('majors.update');
-        Route::delete('/jurusan/{jurusan}', [Admin\MajorController::class, 'destroy'])->name('majors.destroy');
+        Route::post('/jurusan', [Admin\MajorController::class, 'store'])->name('majors.store')->middleware('induk.pusat:Jurusan');
+        Route::post('/jurusan/sinkron', [Admin\MajorController::class, 'sync'])->name('majors.sync')->middleware('induk.pusat:Jurusan');
+        Route::post('/jurusan/kelas', [Admin\MajorController::class, 'makeClasses'])->name('majors.classes')->middleware('induk.pusat:Kelas');
+        Route::put('/jurusan/{jurusan}', [Admin\MajorController::class, 'update'])->name('majors.update')->middleware('induk.pusat:Jurusan');
+        Route::delete('/jurusan/{jurusan}', [Admin\MajorController::class, 'destroy'])->name('majors.destroy')->middleware('induk.pusat:Jurusan');
 
         Route::get('/pasangan', [Admin\PairingController::class, 'index'])->name('pairings');
         Route::post('/pasangan', [Admin\PairingController::class, 'store'])->name('pairings.store');
@@ -177,7 +177,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
 
         Route::get('/impor', [Admin\ImportController::class, 'index'])->name('import');
         Route::get('/impor/{type}/template', [Admin\ImportController::class, 'template'])->whereIn('type', ['kelas', 'mapel', 'siswa', 'guru', 'pasangan', 'absensi', 'nilai'])->name('import.template');
-        Route::post('/impor/{type}', [Admin\ImportController::class, 'run'])->whereIn('type', ['kelas', 'mapel', 'siswa', 'guru', 'pasangan', 'absensi', 'nilai'])->middleware('throttle:20,1')->name('import.run');
+        Route::post('/impor/{type}', [Admin\ImportController::class, 'run'])->whereIn('type', ['kelas', 'mapel', 'siswa', 'guru', 'pasangan', 'absensi', 'nilai'])->middleware(['throttle:20,1', 'induk.pusat:Data_ini'])->name('import.run');
 
         Route::get('/hardcopy', [Admin\HardcopyController::class, 'index'])->name('hardcopy');
         Route::get('/hardcopy/template', [Admin\HardcopyController::class, 'template'])->name('hardcopy.template');
@@ -185,8 +185,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/hardcopy/simpan', [Admin\HardcopyController::class, 'commit'])->name('hardcopy.commit');
 
         Route::get('/kenaikan', [Admin\PromotionController::class, 'index'])->name('promotion');
-        Route::post('/kenaikan', [Admin\PromotionController::class, 'promote'])->name('promotion.run');
-        Route::post('/tahun-ajaran', [Admin\PromotionController::class, 'newYear'])->name('promotion.year');
+        Route::post('/kenaikan', [Admin\PromotionController::class, 'promote'])->name('promotion.run')->middleware('induk.pusat:Kenaikan_kelas');
+        Route::post('/tahun-ajaran', [Admin\PromotionController::class, 'newYear'])->name('promotion.year')->middleware('induk.pusat:Tahun_ajaran');
 
         Route::get('/log', [Admin\LogController::class, 'index'])->name('logs');
 
