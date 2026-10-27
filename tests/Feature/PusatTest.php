@@ -39,7 +39,7 @@ class PusatTest extends TestCase
     }
 
     /** Pusat palsu untuk sinkron. */
-    private function fakePusat(array $siswa, array $kelas = null): void
+    private function fakePusat(array $siswa, ?array $kelas = null): void
     {
         $kelas ??= [['uuid' => 'k-1', 'nama' => 'X RPL 1', 'tingkat' => 'X', 'jurusan_kode' => 'RPL', 'tahun_ajaran' => '2026/2027']];
         $data = [
