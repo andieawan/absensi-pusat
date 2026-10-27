@@ -70,6 +70,9 @@ class PusatSsoController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
         $request->session()->put('via_pusat', true);
+        // Daftar aplikasi lain milik akun ini (menu "Pindah ke aplikasi lain"); hanya nama & tautan lewat Pusat.
+        $request->session()->put('aplikasi_lain', collect((array) ($res->json('user.aplikasi_lain') ?? []))
+            ->filter(fn ($a) => is_array($a) && isset($a['nama'], $a['url']))->map(fn ($a) => ['nama' => (string) $a['nama'], 'url' => (string) $a['url']])->take(20)->values()->all());
         Audit::log('Login', 'Akun Guru', $user->nama, 'Login berhasil lewat Pusat');
 
         return redirect()->intended(route('dashboard'));

@@ -66,6 +66,7 @@
                     <a class="only-mobile" role="menuitem" href="{{ route($r) }}"><svg class="ic"><use href="#{{ $icon }}"/></svg>{{ $label }}</a>
                 @endforeach
                 <button type="button" class="menu-btn hide" id="pwa-install" role="menuitem">📲 Pasang Aplikasi</button>
+                @include('partials.aplikasi-lain')
                 <a role="menuitem" href="{{ route('password') }}">🔑 Ganti Password</a>
                 <a role="menuitem" href="{{ route('switch') }}">🔄 Ganti Akun</a>
                 <form method="post" action="{{ route('logout') }}">@csrf<button class="menu-btn danger" role="menuitem">⎋ Keluar</button></form>
