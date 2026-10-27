@@ -28,6 +28,7 @@ class PusatSync
     public function jalankan(bool $terapkan, bool $paksa = false): array
     {
         Sambungan::tarikAman(); // sambungan antar-aplikasi ikut diperbarui setiap sinkron
+        ProfilPusat::tarikAman(); // nama sekolah, kepala sekolah, guru BK
         $jurusan = PusatKlien::semua('jurusan');
         $tahun = PusatKlien::semua('tahun-ajaran');
         $kelas = PusatKlien::semua('kelas');

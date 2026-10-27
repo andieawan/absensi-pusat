@@ -42,6 +42,8 @@ class PusatWebhookController extends Controller
             $data = (array) $request->json('data', []);
             if ($event === 'sambungan.diperbarui') {
                 \App\Services\Sambungan::tarik(); // gagal → transaksi batal → Pusat mengirim ulang
+            } elseif ($event === 'profil.diperbarui') {
+                \App\Services\ProfilPusat::tarik();
             } elseif (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
                 PusatAkun::cabutBilaPerlu($data);
                 PusatAkun::tautPegawai($data);

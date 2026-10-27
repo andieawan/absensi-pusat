@@ -18,7 +18,16 @@
 <div class="grid g2" style="align-items:start">
     <form method="post" action="{{ route('admin.settings.update') }}" class="card">@csrf @method('PUT')
         <h2>Pengaturan Sekolah</h2>
+        @php
+            $profil = \App\Services\ProfilPusat::semua();
+            $dariPusat = fn (string $k) => \App\Services\PusatKlien::aktif() && ! empty($profil['diisi']) && match ($k) {
+                'school_name' => ! empty($profil['nama']), 'kepsek_nama' => ! empty($profil['kepsek']), 'bk_nama' => ! empty($profil['guru_bk'][0]), default => false };
+        @endphp
+        @if($dariPusat('school_name'))
+        <div class="field"><label>Nama sekolah <small class="hint">(dari Profil Sekolah di Pusat)</small></label><input type="text" value="{{ $settings->school_name }}" readonly><input type="hidden" name="school_name" value="{{ $settings->school_name }}"></div>
+        @else
         <div class="field"><label>Nama sekolah</label><input type="text" name="school_name" value="{{ old('school_name', $settings->school_name) }}" required></div>
+        @endif
         <div class="fields">
             @if(\App\Services\PusatKlien::kelolaSiswa())
             <div><label>Tahun ajaran</label><input type="text" value="{{ $settings->tahun_ajaran }}" readonly aria-readonly="true"><small class="hint">Mengikuti tahun ajaran aktif di Pusat.</small></div>
@@ -28,8 +37,16 @@
             <div><label>Semester</label>@include('partials.select', ['name' => 'semester', 'options' => ['Ganjil' => 'Ganjil', 'Genap' => 'Genap'], 'selected' => old('semester', $settings->semester)])</div>
         </div>
         <div class="fields" style="margin-top:12px">
+            @if($dariPusat('kepsek_nama'))
+            <div><label>Nama Kepala Sekolah <small class="hint">(dari Pusat)</small></label><input type="text" value="{{ $settings->kepsek_nama }}" readonly></div>
+            @else
             <div><label>Nama Kepala Sekolah</label><input type="text" name="kepsek_nama" value="{{ old('kepsek_nama', $settings->kepsek_nama) }}"></div>
+            @endif
+            @if($dariPusat('bk_nama'))
+            <div><label>Nama Guru BK <small class="hint">(dari peran BK di Pusat)</small></label><input type="text" value="{{ $settings->bk_nama }}" readonly></div>
+            @else
             <div><label>Nama Guru BK</label><input type="text" name="bk_nama" value="{{ old('bk_nama', $settings->bk_nama) }}"></div>
+            @endif
         </div>
         <div class="field" style="margin-top:12px"><label>Simpan backup (minggu)</label><input type="number" name="backup_retention_weeks" min="1" max="104" value="{{ old('backup_retention_weeks', $settings->backup_retention_weeks ?: 8) }}"></div>
         @if(\App\Support\DbUpdate::pwReady())
@@ -38,6 +55,7 @@
             $pwBebas = old('pw_form') ? old('pw_mode') === 'bebas' : $pp['mode'] === 'bebas';
         @endphp
         <fieldset class="fs" style="margin:16px 0 0;border:1px solid var(--line);border-radius:10px;padding:12px"><legend style="padding:0 6px;font-weight:700">Aturan Password Pengguna</legend>
+            @if(\App\Services\PusatKlien::kelolaSiswa())<div class="alert alert-info" style="margin:0 0 10px"><span class="alert-ic" aria-hidden="true">i</span><span class="alert-txt">Aturan ini hanya untuk <b>akun lokal</b> Absensi (mis. admin darurat). Akun yang masuk lewat Pusat mengikuti aturan password di <b>Pusat → Profil Sekolah</b>.</span></div>@endif
             <input type="hidden" name="pw_form" value="1">
             <label class="chk"><input type="radio" name="pw_mode" value="aturan" @checked(! $pwBebas) onchange="document.getElementById('pw-rules').hidden=false"> Pakai aturan (disarankan)</label>
             <label class="chk"><input type="radio" name="pw_mode" value="bebas" @checked($pwBebas) onchange="document.getElementById('pw-rules').hidden=true"> Bebas — password apa saja, asal tidak kosong</label>
@@ -64,7 +82,13 @@
             <small class="mut" style="display:block;margin-top:6px">Gabungan = alpa + izin + sakit, untuk siswa yang tidak mencapai ambang per jenis. Bawaan: 2 / 2 / 2 / 3. Perubahan langsung berlaku untuk semua data.</small>
         </fieldset>
         @endif
-        @if(\App\Support\DbUpdate::selfReady())
+        @php
+            $tuTerpisah = config('absensi.tu_url') || in_array('tu', collect((array) session('aplikasi_lain', []))->pluck('kode')->all(), true);
+        @endphp
+        @if($tuTerpisah)
+        <p class="hint" style="margin-top:16px">Absen mandiri guru &amp; staf diatur di <b>aplikasi TU</b>.</p>
+        @endif
+        @if(\App\Support\DbUpdate::selfReady() && ! $tuTerpisah)
         @php
             $sc = \App\Services\StaffService::config();
         @endphp

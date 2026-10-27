@@ -133,6 +133,10 @@ class AdminService
                 throw new UserError('Nomor HP orang tua tidak valid. Contoh: 081234567890.');
             }
         }
+        if ($s && $s->pusat_uuid !== null && PusatKlien::kelolaSiswa() && (array_key_exists('telp_ortu', $data) || array_key_exists('nama_ortu', $data))
+            && ($data['telp_ortu'] !== $s->telp_ortu || $data['nama_ortu'] !== $s->nama_ortu)) {
+            PusatKlien::kontakOrtu($s->pusat_uuid, $data['telp_ortu'], $data['nama_ortu'], $actor->nama); // gagal → UserError, tidak disimpan
+        }
         if ($s) {
             $s->update($data); // NIS tidak dapat diubah
             Audit::log('Ubah Data Siswa', 'Siswa', $actor->nama, "{$s->nama} (NIS {$s->nis})");
@@ -245,6 +249,12 @@ class AdminService
         if (! empty($in['att_form']) && \App\Support\DbUpdate::attReady()) {
             foreach (\App\Support\AttentionPolicy::DEFAULTS as $k => $def) {
                 $staff['att_'.$k] = max(1, min(100, (int) ($in['att_'.$k] ?? $def)));
+            }
+        }
+        $profil = PusatKlien::aktif() ? ProfilPusat::semua() : [];
+        foreach (['school_name' => $profil['nama'] ?? null, 'kepsek_nama' => $profil['kepsek'] ?? null, 'bk_nama' => $profil['guru_bk'][0] ?? null] as $k => $v) {
+            if (! empty($profil['diisi']) && is_string($v) && $v !== '') {
+                $in[$k] = $v; // diatur di Pusat
             }
         }
         SchoolSetting::put($staff + [

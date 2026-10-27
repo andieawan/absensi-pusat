@@ -46,6 +46,7 @@ class PusatKelolaSiswaTest extends TestCase
 
     public function test_kontak_orang_tua_tetap_bisa_dilengkapi(): void
     {
+        \Illuminate\Support\Facades\Http::fake(['*' => \Illuminate\Support\Facades\Http::response(['data' => []])]); // diteruskan ke Pusat
         AdminService::saveStudent($this->admin, $this->s, ['nama' => $this->s->nama, 'jk' => $this->s->jk, 'class_id' => 1, 'status' => 'aktif',
             'nama_ortu' => 'Bu Siti', 'telp_ortu' => '081234567890']);
         $this->assertSame('Bu Siti', $this->s->fresh()->nama_ortu);

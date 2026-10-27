@@ -27,6 +27,26 @@ class PusatKlien
         return Schema::hasColumn('users', 'pusat_uuid') && Schema::hasTable('pusat_state');
     }
 
+    /**
+     * Kontak orang tua diubah di Absensi → diteruskan ke Pusat (izin "siswa_kontak") agar semua aplikasi memakai nomor yang sama.
+     * Melempar UserError berpesan jelas bila gagal (perubahan tidak disimpan).
+     */
+    public static function kontakOrtu(string $uuid, ?string $telp, ?string $nama, string $petugas): void
+    {
+        try {
+            $res = self::http()->patch('/api/v1/siswa/'.$uuid.'/kontak', ['no_hp_ortu' => $telp, 'nama_ortu' => $nama, 'petugas' => $petugas]);
+        } catch (\Throwable $e) {
+            report($e);
+            throw new \App\Exceptions\UserError('Pusat Sekolah tidak dapat dihubungi, kontak orang tua belum disimpan. Coba lagi sebentar lagi.');
+        }
+        if ($res->status() === 403) {
+            throw new \App\Exceptions\UserError('Absensi belum diberi izin mengubah kontak orang tua di Pusat. Di Pusat → Aplikasi → Absensi, centang izin "siswa_kontak", lalu coba lagi.');
+        }
+        if (! $res->successful()) {
+            throw new \App\Exceptions\UserError('Pusat menolak perubahan kontak orang tua (HTTP '.$res->status().'): '.($res->json('error.pesan') ?? 'coba lagi'));
+        }
+    }
+
     public static function http(): PendingRequest
     {
         return Http::baseUrl(config('pusat.url'))
