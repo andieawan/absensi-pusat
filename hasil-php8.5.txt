@@ -8,6 +8,6 @@ Configuration: /home/runner/work/absensi-pusat/absensi-pusat/phpunit.xml
 ............................................................... 189 / 216 ( 87%)
 ...........................                                     216 / 216 (100%)
 
-Time: 00:13.599, Memory: 77.00 MB
+Time: 00:13.241, Memory: 77.00 MB
 
 OK (216 tests, 1684 assertions)
