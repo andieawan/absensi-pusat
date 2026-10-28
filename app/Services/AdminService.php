@@ -135,7 +135,9 @@ class AdminService
         }
         if ($s && $s->pusat_uuid !== null && PusatKlien::kelolaSiswa() && (array_key_exists('telp_ortu', $data) || array_key_exists('nama_ortu', $data))
             && ($data['telp_ortu'] !== $s->telp_ortu || $data['nama_ortu'] !== $s->nama_ortu)) {
-            PusatKlien::kontakOrtu($s->pusat_uuid, $data['telp_ortu'], $data['nama_ortu'], $actor->nama); // gagal → UserError, tidak disimpan
+            if (! PusatKlien::kontakOrtu($s->pusat_uuid, $data['telp_ortu'], $data['nama_ortu'], $actor->nama)) { // ditolak → UserError
+                session()->flash('warning', 'Pusat Sekolah sedang tidak bisa dihubungi. Kontak orang tua sudah disimpan di Absensi dan akan dikirim ke Pusat otomatis.');
+            }
         }
         if ($s) {
             $s->update($data); // NIS tidak dapat diubah

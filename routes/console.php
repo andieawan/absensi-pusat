@@ -71,6 +71,11 @@ Artisan::command('pusat:sinkron {--terapkan : Tulis perubahan (tanpa ini hanya s
     return 0;
 })->purpose('Tarik data induk (kelas & siswa) dari Pusat');
 
+// Antrean ke Pusat (mis. kontak orang tua saat Pusat mati) dicoba tiap 5 menit bila cron schedule:run terpasang.
+if (config('pusat.enabled')) {
+    Schedule::call(fn () => \App\Services\PusatAntrean::kirim())->name('pusat-antrean')->everyFiveMinutes()->withoutOverlapping();
+}
+
 // Sinkron otomatis tiap jam — hanya bila PUSAT_SINKRON_OTOMATIS=true (bawaan mati: sinkron lewat tombol Admin).
 if (config('pusat.enabled') && config('pusat.sinkron_otomatis')) {
     Schedule::command('pusat:sinkron --terapkan')->hourly()->withoutOverlapping();

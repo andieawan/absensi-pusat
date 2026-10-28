@@ -30,6 +30,11 @@
         <tr><td class="mut">Tahun ajaran aktif</td><td>{{ $p['tahun'] ?: '-' }}</td></tr>
         <tr><td class="mut">Sinkron terakhir</td><td>{{ $terakhirTeks }}@if(empty($p['terakhir']) && $p['aktif'] && $p['siap']) <span class="badge b-warn">belum pernah</span>@endif</td></tr>
         <tr><td class="mut">Data tersalin</td><td>{{ collect($p['jumlah'])->map(fn ($n, $l) => $n.' '.$l)->implode(' · ') }}</td></tr>
+        @if(! empty($p['antreanJumlah']))
+        <tr><td class="mut">Menunggu dikirim ke Pusat</td><td><span class="badge b-warn">{{ $p['antreanJumlah'] }} perubahan</span>
+            <small class="mut">dikirim otomatis begitu Pusat bisa dihubungi (atau tekan Sinkron sekarang).</small>
+            @php($g = collect($p['antrean'])->pluck('galat')->filter()->unique()->first())@if($g)<br><small class="mut">Terakhir: {{ $g }}</small>@endif</td></tr>
+        @endif
         <tr><td class="mut">Sinkron otomatis</td><td>{{ ! empty($p['otomatis']) ? 'Tiap jam' : 'Lewat webhook saat ada perubahan di Pusat, ditambah sinkron penuh bila diperlukan' }}</td></tr>
     </table></div>
     @if($p['aktif'] && $p['siap'])

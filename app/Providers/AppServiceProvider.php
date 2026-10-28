@@ -26,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Perubahan yang tertunda karena Pusat mati dikirim ulang setelah respons selesai (tanpa perlu cron).
+        if (config('pusat.enabled') && ! $this->app->runningInConsole()) {
+            $this->app->terminating(fn () => \App\Services\PusatAntrean::kirimBilaPerlu());
+        }
+
         // Proxy tepercaya dari config (lihat config/app.php: trusted_proxies).
         if ($proxi = trim((string) config('app.trusted_proxies'))) {
             \Illuminate\Http\Middleware\TrustProxies::at($proxi === '*' ? '*' : array_map('trim', explode(',', $proxi)));

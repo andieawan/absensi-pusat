@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\DB;
+
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -31,19 +33,60 @@ class PusatKlien
      * Kontak orang tua diubah di Absensi → diteruskan ke Pusat (izin "siswa_kontak") agar semua aplikasi memakai nomor yang sama.
      * Melempar UserError berpesan jelas bila gagal (perubahan tidak disimpan).
      */
-    public static function kontakOrtu(string $uuid, ?string $telp, ?string $nama, string $petugas): void
+    /**
+     * Kontak orang tua diubah di Absensi → diteruskan ke Pusat (izin "siswa_kontak").
+     * Pusat tidak bisa dihubungi → disimpan di Absensi dan diantrekan, dikirim otomatis nanti. @return bool true = langsung terkirim
+     */
+    public static function kontakOrtu(string $uuid, ?string $telp, ?string $nama, string $petugas): bool
     {
-        try {
-            $res = self::http()->patch('/api/v1/siswa/'.$uuid.'/kontak', ['no_hp_ortu' => $telp, 'nama_ortu' => $nama, 'petugas' => $petugas]);
-        } catch (\Throwable $e) {
-            report($e);
+        $data = ['no_hp_ortu' => $telp, 'nama_ortu' => $nama, 'petugas' => $petugas];
+        $hasil = self::kirimKontak($uuid, $data);
+        if ($hasil === 'ok') {
+            DB::table('pusat_antrean')->where(['jenis' => 'kontak', 'kunci' => $uuid])->delete();
+
+            return true;
+        }
+        if ($hasil === 'mati' && PusatAntrean::siap()) {
+            PusatAntrean::antre('kontak', $uuid, $data, 'Pusat belum bisa dihubungi');
+
+            return false;
+        }
+        if ($hasil === 'mati') {
             throw new \App\Exceptions\UserError('Pusat Sekolah tidak dapat dihubungi, kontak orang tua belum disimpan. Coba lagi sebentar lagi.');
         }
-        if ($res->status() === 403) {
-            throw new \App\Exceptions\UserError('Absensi belum diberi izin mengubah kontak orang tua di Pusat. Di Pusat → Aplikasi → Absensi, centang izin "siswa_kontak", lalu coba lagi.');
+        throw new \App\Exceptions\UserError(substr($hasil, 9));
+    }
+
+    /** @return string 'ok' | 'mati' (jaringan/5xx, layak dicoba lagi) | 'ditolak:<pesan>' */
+    public static function kirimKontak(string $uuid, array $data): string
+    {
+        try {
+            $res = self::http()->patch('/api/v1/siswa/'.$uuid.'/kontak', $data);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return 'mati';
         }
-        if (! $res->successful()) {
-            throw new \App\Exceptions\UserError('Pusat menolak perubahan kontak orang tua (HTTP '.$res->status().'): '.($res->json('error.pesan') ?? 'coba lagi'));
+        if ($res->successful()) {
+            return 'ok';
+        }
+        if ($res->status() >= 500 || in_array($res->status(), [408, 429], true)) {
+            return 'mati';
+        }
+        if ($res->status() === 403) {
+            return 'ditolak:Absensi belum diberi izin mengubah kontak orang tua di Pusat. Di Pusat → Aplikasi → Absensi, centang izin "siswa_kontak", lalu coba lagi.';
+        }
+
+        return 'ditolak:Pusat menolak perubahan kontak orang tua (HTTP '.$res->status().'): '.($res->json('error.pesan') ?? 'coba lagi');
+    }
+
+    /** Cek cepat Pusat hidup (dipakai sebelum mengarahkan ke login Pusat). */
+    public static function hidup(): bool
+    {
+        try {
+            return self::http()->timeout(4)->connectTimeout(3)->get('/api/v1/ping')->successful();
+        } catch (\Throwable) {
+            return false;
         }
     }
 

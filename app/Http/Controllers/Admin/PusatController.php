@@ -26,6 +26,8 @@ class PusatController extends Controller
                 'jumlah' => ['kelas' => SchoolClass::count(), 'siswa aktif' => Student::active()->count(),
                     'siswa belum tertaut Pusat' => $siap ? Student::active()->whereNull('pusat_uuid')->count() : 0],
                 'perluSinkron' => $siap && (int) PusatKlien::baca('perubahan_menunggu', 0) > 0,
+                'antrean' => \App\Services\PusatAntrean::daftar(),
+                'antreanJumlah' => \App\Services\PusatAntrean::jumlah(),
                 'otomatis' => (bool) config('pusat.sinkron_otomatis'),
                 'ruteUji' => route('admin.pusat.uji'), 'ruteSinkron' => route('admin.pusat.terapkan'),
                 'catatan' => 'Tidak ada data yang dihapus: siswa yang keluar/hilang di Pusat hanya diberi status "keluar", riwayat absensi tetap ada. Mapel yang hilang di Pusat hanya dinonaktifkan; presensi dan nilai tidak pernah dihapus oleh sinkron.',

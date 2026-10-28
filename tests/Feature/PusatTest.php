@@ -31,7 +31,7 @@ class PusatTest extends TestCase
     private function loginViaPusat(array $info)
     {
         Http::swap(new \Illuminate\Http\Client\Factory); // buang tiruan sebelumnya
-        Http::fake(['pusat.test/api/sso/token' => Http::response(['access_token' => 't', 'user' => $info])]);
+        Http::fake(['pusat.test/api/sso/token' => Http::response(['access_token' => 't', 'user' => $info]), 'pusat.test/api/v1/ping' => Http::response(['ok' => true])]);
         $this->get('/sso/login');
         $state = session('pusat_sso.state');
 
@@ -60,6 +60,9 @@ class PusatTest extends TestCase
         Http::swap(new \Illuminate\Http\Client\Factory);
         Http::fake(function (Request $r) use ($data) {
             $sumber = basename(parse_url($r->url(), PHP_URL_PATH));
+            if ($r->method() === 'PATCH') {
+                return Http::response(['data' => ['ok' => true]]);
+            }
             if (! isset($data[$sumber])) {
                 return Http::response(['error' => ['pesan' => 'Izin tidak cukup']], 403);
             }
@@ -86,6 +89,7 @@ class PusatTest extends TestCase
 
     public function test_mulai_mengarah_ke_pusat_dengan_pkce_dan_state(): void
     {
+        Http::fake(['pusat.test/api/v1/ping' => Http::response(['ok' => true])]);
         $r = $this->get('/sso/login');
         $loc = $r->headers->get('Location');
         $this->assertStringStartsWith('https://pusat.test/sso/authorize?', $loc);
@@ -129,7 +133,7 @@ class PusatTest extends TestCase
 
     public function test_state_salah_atau_akun_nonaktif_atau_tanpa_peran_dikenal_ditolak(): void
     {
-        Http::fake(['pusat.test/api/sso/token' => Http::response(['user' => $this->info()])]);
+        Http::fake(['pusat.test/api/sso/token' => Http::response(['user' => $this->info()]), 'pusat.test/api/v1/ping' => Http::response(['ok' => true])]);
         $this->get('/sso/login');
         $this->get('/sso/callback?code=abc&state=salah')->assertRedirect('/login');
         $this->assertGuest();
@@ -312,6 +316,26 @@ class PusatTest extends TestCase
         $this->post('/logout');
         $this->webhook('akun.diperbarui', ['uuid' => 'a-8', 'username' => 'g008', 'aktif' => false, 'peran' => ['guru']])->assertOk();
         $this->post('/login', ['username' => 'g008', 'password' => 'PasswordPusat123'])->assertSessionHasErrors('username');
+    }
+
+    public function test_pusat_mati_kontak_diantrekan_lalu_terkirim_dan_login_pusat_memberi_pesan(): void
+    {
+        Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('mati'));
+        $this->get('/sso/login')->assertRedirect('/login')->assertSessionHas('error', fn ($m) => str_contains($m, 'tidak bisa dihubungi'));
+
+        $s = Student::find(1);
+        $s->update(['pusat_uuid' => 's-1']);
+        $this->actingAs($this->admin)->put(route('admin.students.update', $s), ['nama' => $s->nama, 'jk' => $s->jk, 'class_id' => $s->class_id, 'status' => 'aktif',
+            'nama_ortu' => 'Bu Siti', 'telp_ortu' => '081234567890'])->assertSessionHas('warning');
+        $this->assertSame('Bu Siti', $s->fresh()->nama_ortu);
+        $this->assertTrue(\App\Services\PusatAntrean::ada('kontak', 's-1'));
+        $this->get('/admin/pusat')->assertOk()->assertSee('Menunggu dikirim ke Pusat');
+
+        // Pusat hidup lagi; sinkron mengirim antrean dulu dan tidak menimpa kontak dengan data lama Pusat
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1', ['nama_ortu' => 'Lama', 'no_hp_ortu' => '0811111111'])]);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('success');
+        $this->assertFalse(\App\Services\PusatAntrean::ada('kontak', 's-1'));
+        Http::assertSent(fn ($r) => $r->method() === 'PATCH' && str_contains($r->url(), '/api/v1/siswa/s-1/kontak') && $r['nama_ortu'] === 'Bu Siti');
     }
 
     public function test_sinkron_idempoten_dan_kontak_tidak_dihapus_bila_kosong_di_pusat(): void

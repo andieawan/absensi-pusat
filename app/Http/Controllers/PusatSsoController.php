@@ -17,6 +17,9 @@ class PusatSsoController extends Controller
         if (! PusatKlien::aktif() || ! PusatKlien::siap()) {
             return redirect()->route('login')->with('error', 'Login lewat Pusat belum diaktifkan.');
         }
+        if (! PusatKlien::hidup()) {
+            return redirect()->route('login')->with('error', 'Pusat Sekolah sedang tidak bisa dihubungi. Masuk dengan username & password di bawah (akun Pusat memakai password Pusat).');
+        }
         $state = Str::random(40);
         $verifier = Str::random(64);
         $request->session()->put('pusat_sso', ['state' => $state, 'verifier' => $verifier, 'waktu' => time()]);

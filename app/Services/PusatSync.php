@@ -24,9 +24,13 @@ class PusatSync
 
     private ?bool $adaWali = null;
 
+    /** @var array<string,bool> uuid siswa yang kontak orang tuanya masih di antrean ke Pusat */
+    private array $kontakTertunda = [];
+
     /** @return array hasil ringkas untuk ditampilkan/dicetak */
     public function jalankan(bool $terapkan, bool $paksa = false): array
     {
+        PusatAntrean::kirim(); // perubahan tertunda dikirim dulu agar tidak tertimpa data lama dari Pusat
         Sambungan::tarikAman(); // sambungan antar-aplikasi ikut diperbarui setiap sinkron
         ProfilPusat::tarikAman(); // nama sekolah, kepala sekolah, guru BK
         $jurusan = PusatKlien::semua('jurusan');
@@ -58,6 +62,7 @@ class PusatSync
             throw new RuntimeException('Pusat mengembalikan 0 siswa padahal Absensi sudah punya '.$tertaut.' siswa tertaut. Dibatalkan demi keamanan.');
         }
 
+        $this->kontakTertunda = array_fill_keys(PusatAntrean::kunci('kontak'), true);
         $this->hasil = [
             'jurusan' => ['baru' => 0],
             'kelas' => ['baru' => 0, 'ubah' => 0, 'sama' => 0, 'ambigu' => [], 'hilang' => []],
@@ -388,7 +393,11 @@ class PusatSync
                     $this->hasil['siswa']['kelas_tak_dikenal']++;
                 }
             }
-            // Kontak orang tua: Pusat hanya menimpa bila ada isinya (jangan menghapus data Absensi yang belum diisi di Pusat).
+            // Kontak orang tua: Pusat hanya menimpa bila ada isinya (jangan menghapus data Absensi yang belum diisi di Pusat),
+            // dan tidak menimpa kontak yang masih menunggu dikirim ke Pusat.
+            if (isset($this->kontakTertunda[$p['uuid']])) {
+                $p['nama_ortu'] = $p['no_hp_ortu'] = null;
+            }
             if (! empty($p['nama_ortu'])) {
                 $data['nama_ortu'] = $p['nama_ortu'];
             }
