@@ -155,9 +155,10 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::post('/kelas', [Admin\MasterController::class, 'storeClass'])->name('classes.store')->middleware('induk.pusat:Kelas');
         Route::put('/kelas/{class}', [Admin\MasterController::class, 'updateClass'])->name('classes.update')->middleware('induk.pusat:Kelas');
         Route::delete('/kelas/{class}', [Admin\MasterController::class, 'destroyClass'])->name('classes.destroy')->middleware('induk.pusat:Kelas');
-        Route::delete('/mapel/{subject}', [Admin\MasterController::class, 'destroySubject'])->name('subjects.destroy');
-        Route::post('/mapel', [Admin\MasterController::class, 'storeSubject'])->name('subjects.store');
-        Route::put('/mapel/{subject}', [Admin\MasterController::class, 'updateSubject'])->name('subjects.update');
+        Route::delete('/mapel/{subject}', [Admin\MasterController::class, 'destroySubject'])->name('subjects.destroy')->middleware('induk.pusat:Mapel');
+        Route::get('/mapel/csv-pusat', [Admin\MasterController::class, 'subjectsCsv'])->name('subjects.csv');
+        Route::post('/mapel', [Admin\MasterController::class, 'storeSubject'])->name('subjects.store')->middleware('induk.pusat:Mapel');
+        Route::put('/mapel/{subject}', [Admin\MasterController::class, 'updateSubject'])->name('subjects.update')->middleware('induk.pusat:Mapel');
 
         Route::get('/jurusan', [Admin\MajorController::class, 'index'])->name('majors');
         Route::post('/jurusan', [Admin\MajorController::class, 'store'])->name('majors.store')->middleware('induk.pusat:Jurusan');

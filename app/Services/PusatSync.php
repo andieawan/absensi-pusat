@@ -33,6 +33,11 @@ class PusatSync
         $tahun = PusatKlien::semua('tahun-ajaran');
         $kelas = PusatKlien::semua('kelas');
         $siswa = PusatKlien::semua('siswa');
+        try {
+            $mapel = PusatKlien::semua('mapel');
+        } catch (RuntimeException $e) {
+            $mapel = null; // izin "mapel" belum dicentang di Pusat → daftar mapel tetap dikelola di Absensi
+        }
 
         $aktif = collect($tahun)->firstWhere('aktif', true);
         if (! $aktif) {
@@ -47,6 +52,7 @@ class PusatSync
             'jurusan' => ['baru' => 0],
             'kelas' => ['baru' => 0, 'ubah' => 0, 'sama' => 0, 'ambigu' => [], 'hilang' => []],
             'siswa' => ['baru' => 0, 'ubah' => 0, 'sama' => 0, 'ambigu' => [], 'nonaktif' => 0, 'kelas_tak_dikenal' => 0, 'hanya_lokal' => 0],
+            'mapel' => ['baru' => 0, 'ubah' => 0, 'tertaut' => 0, 'nonaktif' => 0, 'hanya_lokal' => []],
             'contoh' => [],
             'peringatan' => [],
             'diterapkan' => false,
@@ -57,6 +63,11 @@ class PusatSync
             $this->jurusan($jurusan);
             $petaKelas = $this->kelas($kelas, $aktif['nama']);
             $this->siswa($siswa, $petaKelas, $tertaut, $paksa, $terapkan);
+            if ($mapel === null) {
+                $this->hasil['peringatan'][] = 'Mata pelajaran belum diambil dari Pusat: centang izin "Mata pelajaran" untuk Absensi di Pusat → Aplikasi.';
+            } elseif ($mapel !== []) {
+                $this->mapel($mapel);
+            }
             if ($terapkan) {
                 PusatAkun::terapkanWali();
                 $set = \App\Models\SchoolSetting::current();
@@ -80,6 +91,9 @@ class PusatSync
             PusatKlien::simpan('tahun_aktif', $aktif['nama']);
             PusatKlien::simpan('sinkron_ringkasan', array_diff_key($this->hasil, ['contoh' => 1]));
             PusatKlien::simpan('perubahan_menunggu', 0);
+            if (! empty($mapel)) {
+                PusatKlien::simpan('mapel_pusat', 1);
+            }
             Audit::log('Sinkron Pusat', 'Integrasi Pusat', null, sprintf(
                 'kelas +%d ~%d, siswa +%d ~%d, dinonaktifkan %d',
                 $this->hasil['kelas']['baru'], $this->hasil['kelas']['ubah'], $this->hasil['siswa']['baru'], $this->hasil['siswa']['ubah'], $this->hasil['siswa']['nonaktif'],
@@ -129,6 +143,59 @@ class PusatSync
             Jurusan::create(['kode' => $j['kode'], 'nama' => $j['nama']]);
             $this->hasil['jurusan']['baru']++;
             $this->catat("Jurusan baru: {$j['kode']}");
+        }
+    }
+
+    /**
+     * Mapel: cocokkan lewat UUID, lalu nama (huruf besar/kecil diabaikan) agar ID lokal & riwayat presensi/nilai tetap.
+     * Mapel tertaut yang hilang/nonaktif di Pusat hanya dinonaktifkan, tidak pernah dihapus.
+     */
+    private function mapel(array $baris): void
+    {
+        if (! \App\Models\Subject::adaKolomAktif()) {
+            return;
+        }
+        $lokal = \App\Models\Subject::all();
+        $perUuid = $lokal->whereNotNull('pusat_uuid')->keyBy('pusat_uuid');
+        $perNama = $lokal->whereNull('pusat_uuid')->groupBy(fn ($s) => mb_strtolower(trim($s->name)));
+        $terlihat = [];
+        foreach ($baris as $m) {
+            if (! empty($m['dihapus']) || empty($m['uuid'])) {
+                continue;
+            }
+            $terlihat[] = $m['uuid'];
+            $data = ['name' => $m['nama'], 'kode' => $m['kode'] ?? null, 'kelompok' => $m['kelompok'] ?? null, 'aktif' => (bool) ($m['aktif'] ?? true)];
+            $s = $perUuid->get($m['uuid']);
+            if (! $s && ($calon = $perNama->get(mb_strtolower(trim($m['nama'])))) && $calon->count() === 1) {
+                $s = $calon->first();
+                $perNama->forget(mb_strtolower(trim($m['nama'])));
+                $s->pusat_uuid = $m['uuid'];
+                $this->hasil['mapel']['tertaut']++;
+            }
+            if (! $s) {
+                \App\Models\Subject::create($data + ['pusat_uuid' => $m['uuid']]);
+                $this->hasil['mapel']['baru']++;
+                $this->catat("Mapel baru: {$m['nama']}");
+                continue;
+            }
+            $s->fill($data);
+            if ($s->isDirty()) {
+                $this->hasil['mapel']['ubah'] += $s->isDirty('pusat_uuid') ? 0 : 1;
+                $s->save();
+            }
+        }
+        foreach ($perUuid as $uuid => $s) {
+            if (! in_array($uuid, $terlihat, true) && $s->aktif) {
+                $s->update(['aktif' => false]);
+                $this->hasil['mapel']['nonaktif']++;
+                $this->catat("Mapel dinonaktifkan: {$s->name}");
+            }
+        }
+        $bk = (int) config('absensi.bk_subject_id');
+        $sisa = $perNama->flatten()->filter(fn ($s) => (int) $s->id !== $bk && $s->aktif)->pluck('name')->all();
+        $this->hasil['mapel']['hanya_lokal'] = $sisa;
+        if ($sisa) {
+            $this->hasil['peringatan'][] = 'Mapel di Absensi yang belum ada di Pusat (tetap dipakai, tambahkan di Pusat agar tertaut): '.implode(', ', array_slice($sisa, 0, 15)).'.';
         }
     }
 

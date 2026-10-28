@@ -45,15 +45,32 @@
         @endunless
     </div>
     <div class="card"><h2>Mata Pelajaran</h2>
-        @foreach($subjects as $s)
-            <form method="post" action="{{ route('admin.subjects.update', $s) }}" class="row" style="margin-bottom:6px">@csrf @method('PUT')
-                <input type="text" name="name" value="{{ $s->name }}" style="flex:1" required aria-label="Nama mapel"><button class="btn btn-sm">Simpan</button></form>
-            @unless((int) $s->id === (int) config('absensi.bk_subject_id'))
-            <form method="post" action="{{ route('admin.subjects.destroy', $s) }}" class="inline" data-confirm="Hapus mapel {{ $s->name }}? Hanya bisa bila belum dipakai di presensi/nilai.">@csrf @method('DELETE')<button class="btn btn-sm btn-danger" style="margin:-2px 0 8px">Hapus {{ $s->name }}</button></form>
-            @endunless
-        @endforeach
-        <form method="post" action="{{ route('admin.subjects.store') }}" class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">@csrf
-            <input type="text" name="name" placeholder="Nama mata pelajaran baru" style="flex:1" required aria-label="Mapel baru"><button class="btn btn-pri btn-sm">Tambah</button></form>
+        @if($mapelPusat)
+            @include('admin._induk', ['apa' => 'Daftar mata pelajaran', 'path' => '/admin/data/mapel', 'ket' => 'Tambah, ubah nama, atau nonaktifkan mapel di Pusat lalu Sinkron. Pasangan guru–mapel–kelas tetap diatur di Absensi.'])
+            <ul style="list-style:none;padding:0;margin:0 0 8px">
+                @foreach($subjects as $s)
+                    <li style="padding:6px 0;border-bottom:1px solid var(--line)">{{ $s->name }}
+                        @if($s->kode)<small class="mut">{{ $s->kode }}</small>@endif
+                        @if($s->aktif === false)<span class="badge">nonaktif</span>@endif
+                        @if(! $s->pusat_uuid && (int) $s->id !== (int) config('absensi.bk_subject_id'))<span class="badge" title="Belum ada di Pusat">hanya di Absensi</span>@endif
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            @foreach($subjects as $s)
+                <form method="post" action="{{ route('admin.subjects.update', $s) }}" class="row" style="margin-bottom:6px">@csrf @method('PUT')
+                    <input type="text" name="name" value="{{ $s->name }}" style="flex:1" required aria-label="Nama mapel"><button class="btn btn-sm">Simpan</button></form>
+                @unless((int) $s->id === (int) config('absensi.bk_subject_id'))
+                <form method="post" action="{{ route('admin.subjects.destroy', $s) }}" class="inline" data-confirm="Hapus mapel {{ $s->name }}? Hanya bisa bila belum dipakai di presensi/nilai.">@csrf @method('DELETE')<button class="btn btn-sm btn-danger" style="margin:-2px 0 8px">Hapus {{ $s->name }}</button></form>
+                @endunless
+            @endforeach
+            <form method="post" action="{{ route('admin.subjects.store') }}" class="row" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">@csrf
+                <input type="text" name="name" placeholder="Nama mata pelajaran baru" style="flex:1" required aria-label="Mapel baru"><button class="btn btn-pri btn-sm">Tambah</button></form>
+            @if(\App\Services\PusatKlien::kelolaSiswa() && $subjects->isNotEmpty())
+                <p class="mut" style="margin-top:10px">Pindahkan daftar ini ke Pusat: <a class="btn btn-sm" href="{{ route('admin.subjects.csv') }}">Unduh CSV mapel untuk Pusat</a>
+                    lalu impor di Pusat → Impor CSV → Mata pelajaran, centang izin “Mata pelajaran” untuk Absensi, dan Sinkron. Mapel yang namanya sama tertaut otomatis — riwayat presensi & nilai tetap.</p>
+            @endif
+        @endif
         <small class="mut">Mapel ber-ID {{ config('absensi.bk_subject_id') }} dianggap “Bimbingan Konseling” dan disembunyikan dari daftar mapel reguler.</small>
     </div>
 </div>

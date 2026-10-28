@@ -20,7 +20,36 @@ class MasterController extends Controller
             ? \App\Models\Jurusan::orderBy('kode')->get()->mapWithKeys(fn ($m) => [$m->kode => $m->kode.($m->nama !== $m->kode ? ' — '.$m->nama : '')])->all()
             : null;
 
-        return view('admin.master', ['classes' => SchoolClass::withCount('students')->orderBy('jurusan')->orderBy('name')->get(), 'subjects' => Subject::orderBy('name')->get(), 'majorOpts' => $majorOpts]);
+        return view('admin.master', ['classes' => SchoolClass::withCount('students')->orderBy('jurusan')->orderBy('name')->get(), 'subjects' => Subject::orderBy('name')->get(), 'majorOpts' => $majorOpts, 'mapelPusat' => Subject::dariPusat()]);
+    }
+
+    /** CSV daftar mapel (kode;nama;kelompok) untuk diimpor ke Pusat → Impor CSV → Mata pelajaran. */
+    public function subjectsCsv()
+    {
+        $kode = [];
+        $baris = ["\u{FEFF}kode;nama;kelompok"];
+        foreach (Subject::orderBy('name')->get() as $s) {
+            $k = $s->kode ?: self::kodeMapel($s->name);
+            for ($i = 2, $asal = $k; isset($kode[$k]); $i++) {
+                $k = mb_substr($asal, 0, 17).$i;
+            }
+            $kode[$k] = true;
+            $baris[] = implode(';', [$k, str_replace([';', "\n", "\r"], [',', ' ', ' '], $s->name), $s->kelompok ?: 'umum']);
+        }
+
+        return response(implode("\r\n", $baris)."\r\n", 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="mapel-untuk-pusat.csv"',
+        ]);
+    }
+
+    /** "Bahasa Indonesia" → "BI", "Matematika" → "MATEMATIKA" (maks 20). */
+    private static function kodeMapel(string $nama): string
+    {
+        $kata = preg_split('/[^\pL\pN]+/u', mb_strtoupper(trim($nama)), -1, PREG_SPLIT_NO_EMPTY) ?: ['MAPEL'];
+        $k = count($kata) === 1 ? $kata[0] : implode('', array_map(fn ($w) => preg_match('/^\pN+$/u', $w) ? $w : mb_substr($w, 0, 1), $kata));
+
+        return mb_substr($k, 0, 20);
     }
 
     public function storeClass(Request $request)

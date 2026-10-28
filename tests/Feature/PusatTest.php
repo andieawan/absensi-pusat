@@ -39,7 +39,7 @@ class PusatTest extends TestCase
     }
 
     /** Pusat palsu untuk sinkron. */
-    private function fakePusat(array $siswa, ?array $kelas = null): void
+    private function fakePusat(array $siswa, ?array $kelas = null, ?array $mapel = null): void
     {
         $kelas ??= [['uuid' => 'k-1', 'nama' => 'X RPL 1', 'tingkat' => 'X', 'jurusan_kode' => 'RPL', 'tahun_ajaran' => '2026/2027']];
         $data = [
@@ -48,9 +48,15 @@ class PusatTest extends TestCase
             'kelas' => $kelas,
             'siswa' => $siswa,
         ];
+        if ($mapel !== null) {
+            $data['mapel'] = $mapel;
+        }
         Http::swap(new \Illuminate\Http\Client\Factory);
         Http::fake(function (Request $r) use ($data) {
             $sumber = basename(parse_url($r->url(), PHP_URL_PATH));
+            if (! isset($data[$sumber])) {
+                return Http::response(['error' => ['pesan' => 'Izin tidak cukup']], 403);
+            }
 
             return Http::response(['data' => $data[$sumber], 'meta' => ['halaman' => 1, 'halaman_terakhir' => 1, 'total' => count($data[$sumber])]]);
         });
@@ -169,6 +175,39 @@ class PusatTest extends TestCase
         $this->assertSame(1, Student::where('nis', 'N-99')->value('class_id')); // siswa baru masuk ke kelas tertaut
         $this->assertNotNull(PusatKlien::baca('sinkron_terakhir'));
         $this->assertTrue(DB::table('jurusan')->where('kode', 'DKV')->exists());
+    }
+
+    public function test_mapel_dari_pusat_menautkan_lewat_nama_dan_mengunci_edit(): void
+    {
+        $this->actingAs($this->admin);
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1')]);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => collect($h['peringatan'])->contains(fn ($p) => str_contains($p, 'Mata pelajaran')));
+        $this->post(route('admin.subjects.store'), ['name' => 'Fisika'])->assertSessionHas('success'); // belum dari Pusat → masih bisa
+        $this->get(route('admin.subjects.csv'))->assertOk()->assertSee('kode;nama;kelompok')->assertSee('BI;Bahasa Indonesia;umum');
+
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1')], null, [
+            ['uuid' => 'm-1', 'kode' => 'BIND', 'nama' => 'bahasa indonesia', 'kelompok' => 'umum', 'aktif' => true],
+            ['uuid' => 'm-2', 'kode' => 'PAI', 'nama' => 'Pendidikan Agama Islam', 'kelompok' => 'umum', 'aktif' => true],
+        ]);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['mapel']['tertaut'] === 1 && $h['mapel']['baru'] === 1
+            && in_array('Matematika', $h['mapel']['hanya_lokal'], true) && ! in_array('Bimbingan Konseling', $h['mapel']['hanya_lokal'], true));
+        $bi = \App\Models\Subject::find(1);
+        $this->assertSame('m-1', $bi->pusat_uuid);           // ID lokal tetap → riwayat aman
+        $this->assertSame('bahasa indonesia', $bi->name);
+        $this->assertSame('BIND', $bi->kode);
+        $this->assertTrue(\App\Models\Subject::where('pusat_uuid', 'm-2')->exists());
+
+        $this->post(route('admin.subjects.store'), ['name' => 'Kimia'])->assertSessionHas('error');
+        $this->put(route('admin.subjects.update', 1), ['name' => 'Ganti'])->assertSessionHas('error');
+        $this->assertFalse(\App\Models\Subject::where('name', 'Kimia')->exists());
+        $this->get(route('admin.master'))->assertOk()->assertSee('Daftar mata pelajaran dikelola di Pusat');
+
+        // mapel dihapus di Pusat → hanya dinonaktifkan
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1')], null, [['uuid' => 'm-1', 'kode' => 'BIND', 'nama' => 'Bahasa Indonesia', 'kelompok' => 'umum', 'aktif' => true]]);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['mapel']['nonaktif'] === 1);
+        $pai = \App\Models\Subject::where('pusat_uuid', 'm-2')->first();
+        $this->assertFalse($pai->aktif);
+        $this->assertFalse(\App\Models\Subject::regular()->whereKey($pai->id)->exists());
     }
 
     public function test_sinkron_idempoten_dan_kontak_tidak_dihapus_bila_kosong_di_pusat(): void

@@ -17,8 +17,16 @@ class IndukPusat
         if (! PusatKlien::kelolaSiswa()) {
             return $next($request);
         }
-        if ($request->route('type') !== null && ! in_array($request->route('type'), ['kelas', 'guru', 'siswa'], true)) {
-            return $next($request); // impor mapel/pasangan/absensi/nilai tetap di Absensi
+        $mapelPusat = \App\Models\Subject::dariPusat();
+        if ($apa === 'Mapel' && ! $mapelPusat) {
+            return $next($request); // daftar mapel baru dikunci setelah diambil dari Pusat
+        }
+        $kunci = $mapelPusat ? ['kelas', 'guru', 'siswa', 'mapel'] : ['kelas', 'guru', 'siswa'];
+        if ($request->route('type') !== null && ! in_array($request->route('type'), $kunci, true)) {
+            return $next($request); // impor pasangan/absensi/nilai tetap di Absensi
+        }
+        if ($apa === 'Mapel') {
+            $apa = 'Mata_pelajaran';
         }
 
         return back()->with('error', str_replace('_', ' ', $apa).' dikelola di Pusat Sekolah. Ubah di Pusat; perubahan tersalin otomatis ke Absensi.');
