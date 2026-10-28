@@ -11,7 +11,7 @@ class User extends Authenticatable
 
     public $timestamps = false;
     protected $guarded = [];
-    protected $hidden = ['password_hash'];
+    protected $hidden = ['password_hash', 'password_pusat'];
     protected $rememberTokenName = ''; // fitur "ingat saya" tidak dipakai
 
     protected function casts(): array

@@ -290,6 +290,30 @@ class PusatTest extends TestCase
         $this->assertStringContainsString('Masuk lewat Pusat', session('errors')->first('username'));
     }
 
+    public function test_login_cadangan_dengan_password_pusat(): void
+    {
+        $u = \App\Models\User::create(['username' => 'g008', 'nama' => 'Abdul', 'roles' => ['guru'], 'subjects' => [], 'classes' => [],
+            'password_hash' => \App\Support\Passwords::make(\Illuminate\Support\Str::random(40)), 'is_active' => true, 'pusat_uuid' => 'a-8']);
+        // masih wajib ganti password awal → login lokal tertutup
+        $this->webhook('akses.diperbarui', ['uuid' => 'a-8', 'username' => 'g008', 'aktif' => true, 'peran' => ['guru'], 'password_hash' => null])->assertOk();
+        $this->post('/login', ['username' => 'G008', 'password' => 'PasswordPusat123'])->assertSessionHasErrors('username');
+
+        $this->webhook('akun.diperbarui', ['uuid' => 'a-8', 'username' => 'g008', 'aktif' => true, 'peran' => ['guru'], 'password_hash' => password_hash('PasswordPusat123', PASSWORD_BCRYPT)])->assertOk();
+        $hashLokal = $u->fresh()->password_hash;
+        $this->post('/login', ['username' => 'G008', 'password' => 'PasswordPusat123'])->assertRedirect();
+        $this->assertAuthenticatedAs($u->fresh());
+        $this->assertSame($hashLokal, $u->fresh()->password_hash); // hash lokal tidak diubah → sesi lain tidak terputus
+
+        // ganti password diarahkan ke Pusat
+        $this->get('/password')->assertOk()->assertSee('Ganti password di Pusat');
+        $this->post('/password', ['old' => 'x', 'new' => 'y', 'new_confirmation' => 'y'])->assertRedirect('https://pusat.test/profil/password');
+
+        // akun dinonaktifkan di Pusat → login cadangan juga tertutup
+        $this->post('/logout');
+        $this->webhook('akun.diperbarui', ['uuid' => 'a-8', 'username' => 'g008', 'aktif' => false, 'peran' => ['guru']])->assertOk();
+        $this->post('/login', ['username' => 'g008', 'password' => 'PasswordPusat123'])->assertSessionHasErrors('username');
+    }
+
     public function test_sinkron_idempoten_dan_kontak_tidak_dihapus_bila_kosong_di_pusat(): void
     {
         Student::find(1)->update(['nama_ortu' => 'Bu Sari', 'telp_ortu' => '628111']);

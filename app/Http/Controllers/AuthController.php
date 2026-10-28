@@ -79,13 +79,14 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['username' => 'Terlalu banyak percobaan login gagal. Coba lagi dalam '.ceil(RateLimiter::availableIn($key) / 60).' menit.']);
         }
         $user = User::whereRaw('LOWER(username) = ?', [$username])->first();
-        if (! $user || ! $user->is_active || ! Passwords::check($data['password'], $user->password_hash)) {
+        $lewatPusat = $user && \App\Services\PusatAkun::cocokSandiPusat($user, $data['password']); // login cadangan akun Pusat
+        if (! $user || ! $user->is_active || (! $lewatPusat && ! Passwords::check($data['password'], $user->password_hash))) {
             RateLimiter::hit($key, 15 * 60);
             throw ValidationException::withMessages(['username' => 'Username atau password salah, atau akun nonaktif.'
-                .(\App\Services\PusatKlien::aktif() ? ' Akun yang dibuat di Pusat Sekolah tidak memakai password di sini — gunakan tombol “Masuk lewat Pusat”.' : '')]);
+                .(\App\Services\PusatKlien::aktif() ? ' Akun dari Pusat Sekolah memakai password Pusat; akun yang belum mengganti password awal masuk dulu lewat tombol “Masuk lewat Pusat”.' : '')]);
         }
         RateLimiter::clear($key);
-        if (Passwords::needsRehash($user->password_hash)) {
+        if (! $lewatPusat && Passwords::needsRehash($user->password_hash)) {
             $user->forceFill(['password_hash' => Passwords::make($data['password'])])->save(); // hash lama → bcrypt
         }
 
@@ -112,11 +113,20 @@ class AuthController extends Controller
 
     public function showPassword()
     {
-        return view('auth.password');
+        return view('auth.password', ['pusat' => $this->akunPusat()]);
+    }
+
+    /** Akun dari Pusat: password diganti di Pusat (lalu tersalin ke semua aplikasi), bukan di sini. */
+    private function akunPusat(): ?string
+    {
+        return $this->me()->pusat_uuid && \App\Services\PusatKlien::aktif() ? rtrim((string) config('pusat.url'), '/').'/profil/password' : null;
     }
 
     public function password(Request $request)
     {
+        if ($url = $this->akunPusat()) {
+            return redirect()->away($url);
+        }
         $data = $request->validate([
             'old' => 'required|string',
             'new' => ['required', 'string', 'confirmed', 'different:old', \App\Support\PasswordPolicy::rule()],

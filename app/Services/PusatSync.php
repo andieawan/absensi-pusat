@@ -268,6 +268,9 @@ class PusatSync
                     'sub' => $a['uuid'], 'username' => $a['username'] ?? '', 'nama' => $a['nama'] ?? null,
                     'peran' => $a['peran'] ?? [], 'pegawai' => ['uuid' => $a['pegawai_uuid'] ?? null],
                 ]);
+                if ($u) {
+                    PusatAkun::terapkanSandi($a);
+                }
                 if ($u && ! $lama) {
                     $u->wasRecentlyCreated ? $this->hasil['akun']['baru']++ : $this->hasil['akun']['tertaut']++;
                 }

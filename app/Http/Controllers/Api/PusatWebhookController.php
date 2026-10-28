@@ -47,6 +47,7 @@ class PusatWebhookController extends Controller
             } elseif (in_array($event, ['akun.diperbarui', 'akses.diperbarui'], true)) {
                 PusatAkun::cabutBilaPerlu($data);
                 PusatAkun::tautPegawai($data);
+                PusatAkun::terapkanSandi($data); // login cadangan
             } elseif (preg_match('/^(siswa|kelas|jurusan|tahun_ajaran|mapel|pengampu)\./', $event)) {
                 if (str_starts_with($event, 'tahun_ajaran.')) {
                     \App\Services\PusatSync::terapkanSemester($data); // semester langsung berlaku, tanpa menunggu sinkron
