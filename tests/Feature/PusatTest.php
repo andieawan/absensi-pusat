@@ -278,6 +278,18 @@ class PusatTest extends TestCase
         $this->get('/admin/pusat')->assertOk()->assertSee('Akun guru &amp; staf', false);
     }
 
+    public function test_ganti_akun_lewat_pusat_keluar_dari_pusat_lalu_masuk_lagi(): void
+    {
+        $this->actingAs($this->admin)->get('/ganti-akun')->assertOk()->assertSee('Ganti akun lewat Pusat');
+        $r = $this->post('/ganti-akun/pusat');
+        $r->assertRedirect();
+        $this->assertStringStartsWith('https://pusat.test/sso/logout?', $r->headers->get('Location'));
+        $this->assertStringContainsString(urlencode(route('sso.login')), $r->headers->get('Location'));
+        $this->assertGuest();
+        $this->post('/login', ['username' => 'g008', 'password' => 'salah'])->assertSessionHasErrors('username');
+        $this->assertStringContainsString('Masuk lewat Pusat', session('errors')->first('username'));
+    }
+
     public function test_sinkron_idempoten_dan_kontak_tidak_dihapus_bila_kosong_di_pusat(): void
     {
         Student::find(1)->update(['nama_ortu' => 'Bu Sari', 'telp_ortu' => '628111']);

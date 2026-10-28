@@ -50,6 +50,26 @@ class AuthController extends Controller
         return redirect()->route('dashboard');
     }
 
+    /**
+     * Ganti ke akun dari Pusat: keluar dari Absensi DAN dari Pusat, lalu langsung ke halaman masuk Pusat
+     * sehingga akun tujuan bisa dipilih (akun Pusat tidak punya password di Absensi).
+     */
+    public function switchPusat(Request $request)
+    {
+        Audit::log('Ganti Akun', 'Akun Guru', $this->me()->nama, 'Keluar untuk masuk dengan akun lain lewat Pusat');
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        if (! \App\Services\PusatKlien::aktif()) {
+            return redirect()->route('login');
+        }
+
+        return redirect()->away(rtrim((string) config('pusat.url'), '/').'/sso/logout?'.http_build_query([
+            'client_id' => config('pusat.client_id'),
+            'post_logout_redirect_uri' => route('sso.login'),
+        ]));
+    }
+
     private function attempt(Request $request): User
     {
         $data = $request->validate(['username' => 'required|string|max:191', 'password' => 'required|string|max:255']);
@@ -61,7 +81,8 @@ class AuthController extends Controller
         $user = User::whereRaw('LOWER(username) = ?', [$username])->first();
         if (! $user || ! $user->is_active || ! Passwords::check($data['password'], $user->password_hash)) {
             RateLimiter::hit($key, 15 * 60);
-            throw ValidationException::withMessages(['username' => 'Username atau password salah, atau akun nonaktif.']);
+            throw ValidationException::withMessages(['username' => 'Username atau password salah, atau akun nonaktif.'
+                .(\App\Services\PusatKlien::aktif() ? ' Akun yang dibuat di Pusat Sekolah tidak memakai password di sini — gunakan tombol “Masuk lewat Pusat”.' : '')]);
         }
         RateLimiter::clear($key);
         if (Passwords::needsRehash($user->password_hash)) {

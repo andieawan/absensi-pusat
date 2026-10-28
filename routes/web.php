@@ -46,6 +46,7 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/ganti-akun', [AuthController::class, 'showSwitch'])->name('switch');
     Route::post('/ganti-akun', [AuthController::class, 'switch'])->middleware('throttle:10,1');
+    Route::post('/ganti-akun/pusat', [AuthController::class, 'switchPusat'])->name('switch.pusat');
     Route::get('/password', [AuthController::class, 'showPassword'])->name('password');
     Route::post('/password', [AuthController::class, 'password']);
 
