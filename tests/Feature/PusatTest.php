@@ -239,6 +239,9 @@ class PusatTest extends TestCase
         $this->delete(route('admin.pairings.destroy'), ['user_id' => $this->guru->id, 'subject_id' => 2, 'class_id' => 1])->assertSessionHas('error');
         $this->delete(route('admin.pairings.destroy'), ['user_id' => $this->wali->id, 'subject_id' => 1, 'class_id' => 1])->assertSessionHas('success');
         $this->get(route('admin.pairings'))->assertOk()->assertSee('Pasangan mapel dikelola di Pusat');
+        $this->get(route('admin.import'))->assertOk()->assertSee('Sudah diimpor di Pusat')
+            ->assertDontSee(route('admin.import.run', 'pasangan'))->assertDontSee(route('admin.import.run', 'mapel'))->assertDontSee(route('admin.import.run', 'siswa'))
+            ->assertSee(route('admin.import.run', 'absensi'))->assertSee(route('admin.import.template', 'nilai'));
 
         // guru baru masuk lewat Pusat → pengampunya langsung terpasang
         $u = \App\Models\User::create(['username' => 'baru', 'nama' => 'Guru Baru', 'roles' => ['guru'], 'subjects' => [], 'classes' => [], 'password_hash' => 'x', 'is_active' => true, 'pusat_uuid' => 'a-9']);
