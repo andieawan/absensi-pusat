@@ -64,6 +64,64 @@ class V1TulisController extends Controller
         return response()->json(['data' => ['siswa_id' => $s->id, 'tanggal' => $d['tanggal'], 'status' => $d['status'], 'dibuat' => $hasil['created'], 'diperbarui' => $hasil['updated']]]);
     }
 
+    /** GET /kehadiran/harian-kelas?kelas_uuid|kelas_id&tanggal → status absensi harian tiap siswa aktif kelas itu (null = belum diisi). */
+    public function harianKelas(Request $r): JsonResponse
+    {
+        $tanggal = (string) $r->query('tanggal', Dates::today());
+        if (! Dates::valid($tanggal)) {
+            return AuthenticateApiKey::error('invalid_request', 'Parameter "tanggal" harus berformat YYYY-MM-DD.', 422);
+        }
+        $k = V1Controller::cariKelas($r);
+        if (! $k) {
+            return AuthenticateApiKey::error('not_found', 'Kelas tidak ditemukan di Absensi (sudah sinkron dari Pusat?).', 404);
+        }
+        $ada = \App\Models\Attendance::where('class_id', $k->id)->where('tanggal', $tanggal)->whereNull('subject_id')->get()->keyBy('student_id');
+        $data = Student::where('class_id', $k->id)->where('status', 'aktif')->orderBy('nama')->get()->map(fn ($s) => [
+            'siswa_uuid' => $s->pusat_uuid, 'siswa_id' => $s->id, 'nama' => $s->nama, 'nis' => $s->nis,
+            'status' => $ada[$s->id]->status ?? null, 'catatan' => $ada[$s->id]->notes ?? null, 'dicatat_via' => $ada[$s->id]->recorded_via ?? null,
+        ])->values();
+
+        return response()->json(['data' => $data, 'meta' => ['kelas_id' => $k->id, 'tanggal' => $tanggal]]);
+    }
+
+    /** POST /kehadiran/manual/kelas {kelas_uuid|kelas_id, tanggal, entri:[{siswa_uuid|siswa_id, status, catatan}], petugas} — absensi harian banyak siswa sekaligus. */
+    public function manualKelas(Request $r): JsonResponse
+    {
+        $d = $r->validate([
+            'tanggal' => 'required|date_format:Y-m-d', 'petugas' => 'nullable|string|max:100',
+            'entri' => 'required|array|min:1|max:200', 'entri.*.status' => 'required|in:H,I,S,A', 'entri.*.catatan' => 'nullable|string|max:200',
+            'entri.*.siswa_uuid' => 'nullable|string|max:36', 'entri.*.siswa_id' => 'nullable|integer',
+        ]);
+        $k = V1Controller::cariKelas($r);
+        if (! $k) {
+            return AuthenticateApiKey::error('not_found', 'Kelas tidak ditemukan di Absensi (sudah sinkron dari Pusat?).', 404);
+        }
+        $siswa = Student::where('class_id', $k->id)->where('status', 'aktif')->get();
+        $perUuid = $siswa->keyBy('pusat_uuid');
+        $perId = $siswa->keyBy('id');
+        try {
+            if (! Dates::valid($d['tanggal']) || Dates::isFuture($d['tanggal'])) {
+                throw new UserError('Tanggal tidak valid atau berada di masa depan.');
+            }
+            $entries = [];
+            foreach ($d['entri'] as $e) {
+                $s = ! empty($e['siswa_uuid']) ? ($perUuid[$e['siswa_uuid']] ?? null) : (! empty($e['siswa_id']) ? ($perId[(int) $e['siswa_id']] ?? null) : null);
+                if (! $s) {
+                    throw new UserError('Ada siswa yang bukan siswa aktif kelas '.$k->name.' di Absensi. Muat ulang halaman lalu coba lagi.');
+                }
+                $entries[$s->id] = ['student_id' => $s->id, 'status' => $e['status'], 'notes' => $e['catatan'] ?? ''];
+            }
+            $entries = array_values($entries);
+            Rules::validateEntries($entries, (int) $k->id);
+            $hasil = AttendanceService::write($entries, (int) $k->id, null, $d['tanggal'], null, 'bk_manual');
+        } catch (UserError $e) {
+            return $this->galat($e);
+        }
+        Audit::log('Absensi Manual BK', 'Absensi', $this->petugas($r), "Kelas {$k->name} {$d['tanggal']}: ".count($entries).' siswa');
+
+        return response()->json(['data' => ['kelas_id' => $k->id, 'tanggal' => $d['tanggal'], 'dibuat' => $hasil['created'], 'diperbarui' => $hasil['updated']]]);
+    }
+
     private function tokenOut(DelegationToken $t): array
     {
         return ['token' => $t->token, 'kelas_id' => $t->class_id, 'berlaku_sampai' => $t->expires_at, 'tautan' => route('delegation', $t->token)];

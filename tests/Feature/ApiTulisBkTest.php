@@ -42,6 +42,32 @@ class ApiTulisBkTest extends TestCase
         $this->assertSame(1, Attendance::count());
     }
 
+    public function test_absensi_harian_satu_kelas_sekaligus(): void
+    {
+        SchoolClass::whereKey(1)->update(['pusat_uuid' => 'k-uuid-1']);
+        foreach ([1, 2, 3, 4] as $i) {
+            Student::whereKey($i)->update(['pusat_uuid' => "s-$i"]);
+        }
+        Student::whereKey(5)->update(['pusat_uuid' => 's-5']); // kelas lain
+        $hari = Dates::today();
+        $h = $this->key(['kehadiran:baca', 'kehadiran:tulis']);
+
+        $r = $this->getJson('/api/v1/kehadiran/harian-kelas?kelas_uuid=k-uuid-1&tanggal='.$hari, $h)->assertOk();
+        $this->assertCount(4, $r->json('data'));
+        $this->assertNull($r->json('data.0.status'));
+
+        $entri = [['siswa_uuid' => 's-1', 'status' => 'H'], ['siswa_uuid' => 's-2', 'status' => 'S', 'catatan' => 'Demam'], ['siswa_uuid' => 's-3', 'status' => 'A'], ['siswa_uuid' => 's-4', 'status' => 'H']];
+        $this->postJson('/api/v1/kehadiran/manual/kelas', ['kelas_uuid' => 'k-uuid-1', 'tanggal' => $hari, 'entri' => $entri, 'petugas' => 'Bu BK'], $h)
+            ->assertOk()->assertJsonPath('data.dibuat', 4);
+        $this->assertSame('S', Attendance::where('student_id', 2)->where('tanggal', $hari)->whereNull('subject_id')->value('status'));
+        $this->assertSame('S', collect($this->getJson('/api/v1/kehadiran/harian-kelas?kelas_uuid=k-uuid-1&tanggal='.$hari, $h)->json('data'))->firstWhere('siswa_uuid', 's-2')['status']);
+
+        // siswa kelas lain ditolak, tidak ada yang tersimpan sebagian
+        $this->postJson('/api/v1/kehadiran/manual/kelas', ['kelas_uuid' => 'k-uuid-1', 'tanggal' => $hari, 'entri' => [['siswa_uuid' => 's-1', 'status' => 'A'], ['siswa_uuid' => 's-5', 'status' => 'A']]], $h)->assertStatus(422);
+        $this->assertSame('H', Attendance::where('student_id', 1)->where('tanggal', $hari)->value('status'));
+        $this->postJson('/api/v1/kehadiran/manual/kelas', ['kelas_uuid' => 'k-uuid-1', 'tanggal' => $hari, 'entri' => $entri], $this->key(['kehadiran:baca']))->assertForbidden();
+    }
+
     public function test_ringkasan_per_kelas_memakai_uuid_dan_hanya_harian(): void
     {
         SchoolClass::whereKey(1)->update(['pusat_uuid' => 'k-uuid-1']);

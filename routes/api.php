@@ -25,11 +25,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/siswa/{id}/rekap', [V1Controller::class, 'rekap'])->whereNumber('id');
         Route::get('/kehadiran', [V1Controller::class, 'kehadiran']);
         Route::get('/kehadiran/ringkasan', [V1Controller::class, 'ringkasan']);
+        Route::get('/kehadiran/harian-kelas', [V1TulisController::class, 'harianKelas']);
         Route::get('/delegasi', [V1TulisController::class, 'delegasiIndex'])->middleware('api.key:kehadiran:tulis');
     });
     // Tulis (khusus aplikasi BK): scope kehadiran:tulis
     Route::middleware('api.key:kehadiran:tulis')->group(function () {
         Route::post('/kehadiran/manual', [V1TulisController::class, 'manual']);
+        Route::post('/kehadiran/manual/kelas', [V1TulisController::class, 'manualKelas']);
         Route::post('/delegasi', [V1TulisController::class, 'delegasiBuat']);
         Route::delete('/delegasi/{token}', [V1TulisController::class, 'delegasiCabut']);
     });
