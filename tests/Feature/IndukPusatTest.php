@@ -92,4 +92,13 @@ class IndukPusatTest extends TestCase
         config(['absensi.tu_url' => 'https://tu.test', 'absensi.bk_url' => 'https://bk.test']);
         $this->actingAs($this->admin)->get('/')->assertOk()->assertDontSee('>TU<', false)->assertDontSee('>BK<', false);
     }
+
+    public function test_menu_admin_dikelompokkan_dan_halaman_pusat_disembunyikan(): void
+    {
+        $r = $this->actingAs($this->admin)->get('/admin/integrasi')->assertOk();
+        $r->assertSee('Guru &amp; Mengajar', false)->assertSee('Sistem')->assertSee('Pusat Sekolah')->assertSee('Kunci API');
+        $this->get('/admin/kelas')->assertOk()->assertSee('Jurusan')->assertSee('Kenaikan Kelas');
+        $this->pusatAktif();
+        $this->get('/admin/kelas')->assertOk()->assertDontSee('>Kenaikan Kelas<', false)->assertDontSee('>Jurusan</a>', false);
+    }
 }
