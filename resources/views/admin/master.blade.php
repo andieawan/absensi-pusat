@@ -14,7 +14,7 @@
 <div class="grid g2" style="align-items:start">
     <div class="card"><h2>Kelas</h2>
         @php($induk = \App\Services\PusatKlien::kelolaSiswa())
-        @if($induk)@include('admin._induk', ['apa' => 'Kelas', 'path' => '/admin/data/kelas', 'ket' => 'Nama kelas, jurusan, tingkat, dan wali kelas diatur di Pusat. Mata pelajaran tetap diatur di sini.'])@else
+        @if($induk)@include('admin._induk', ['apa' => 'Kelas', 'path' => '/admin/data/kelas', 'ket' => 'Nama kelas, jurusan, tingkat, dan wali kelas diatur di Pusat'.($mapelPusat ? '.' : '. Mata pelajaran masih diatur di sini.')])@else
         <p class="hint" style="margin:0 0 8px">Mau membuat banyak kelas sekaligus (mis. X RPL 1–3)? Pakai tab <a href="{{ route('admin.majors') }}">Jurusan</a>.</p>@endif
         @foreach($classes as $c)
             <details style="border-top:1px solid var(--line2);padding:8px 0"><summary style="cursor:pointer"><b>{{ $c->name }}</b> <small>{{ $c->jurusan }} · {{ $c->students_count }} siswa · {{ $c->tahun_ajaran }} {{ $c->semester }}</small></summary>
@@ -46,7 +46,7 @@
     </div>
     <div class="card"><h2>Mata Pelajaran</h2>
         @if($mapelPusat)
-            @include('admin._induk', ['apa' => 'Daftar mata pelajaran', 'path' => '/admin/data/mapel', 'ket' => 'Tambah, ubah nama, atau nonaktifkan mapel di Pusat lalu Sinkron. Pasangan guru–mapel–kelas tetap diatur di Absensi.'])
+            @include('admin._induk', ['apa' => 'Daftar mata pelajaran', 'path' => '/admin/data/mapel', 'ket' => 'Tambah, ubah nama, atau nonaktifkan mapel di Pusat lalu Sinkron.'.(\App\Services\PusatPengampu::aktif() ? ' Pengampu (guru–mapel–kelas) juga diatur di Pusat.' : '')])
             <ul style="list-style:none;padding:0;margin:0 0 8px">
                 @foreach($subjects as $s)
                     <li style="padding:6px 0;border-bottom:1px solid var(--line)">{{ $s->name }}

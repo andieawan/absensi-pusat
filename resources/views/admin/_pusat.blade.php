@@ -13,7 +13,7 @@
         $terakhirTeks = $t->format('d-m-Y H:i').' ('.$t->locale('id')->diffForHumans().')';
     }
     $h = session('hasil');
-    $label = ['jurusan' => 'Jurusan', 'kelas' => 'Kelas', 'siswa' => 'Siswa', 'pegawai' => 'Guru & staf'];
+    $label = ['jurusan' => 'Jurusan', 'kelas' => 'Kelas', 'siswa' => 'Siswa', 'pegawai' => 'Guru & staf', 'mapel' => 'Mata pelajaran', 'akun' => 'Akun guru & staf', 'pengampu' => 'Pasangan mapel'];
 @endphp
 @if(! empty($p['perluSinkron']))<div class="alert alert-warn"><span class="alert-ic" aria-hidden="true">!</span><span class="alert-txt">Ada perubahan dari Pusat yang belum lengkap (mis. siswa dipindah ke kelas baru yang belum tersalin). Klik <b>Sinkron sekarang</b>; bila tidak, sinkron berjalan otomatis dalam satu jam.</span></div>@endif
 <div class="card">
@@ -54,8 +54,8 @@
         @foreach($label as $k => $l)
             @continue(! isset($h[$k]) || ! is_array($h[$k]))
             @php($r = $h[$k])
-            <tr><td><b>{{ $l }}</b></td><td class="c">{{ $r['baru'] ?? 0 }}</td><td class="c">{{ $r['ubah'] ?? '-' }}</td><td class="c">{{ $r['sama'] ?? '-' }}</td>
-                <td class="c">{{ ($r['keluar'] ?? 0) + ($r['nonaktif'] ?? 0) ?: '-' }}</td></tr>
+            <tr><td><b>{{ $l }}</b></td><td class="c">{{ $r['baru'] ?? 0 }}</td><td class="c">{{ $r['ubah'] ?? $r['tertaut'] ?? '-' }}</td><td class="c">{{ $r['sama'] ?? '-' }}</td>
+                <td class="c">{{ ($r['keluar'] ?? 0) + ($r['nonaktif'] ?? 0) + ($r['dihapus'] ?? 0) ?: '-' }}</td></tr>
         @endforeach
         </tbody></table></div>
     @if(! empty($h['contoh']))

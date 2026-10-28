@@ -39,7 +39,7 @@ class PusatTest extends TestCase
     }
 
     /** Pusat palsu untuk sinkron. */
-    private function fakePusat(array $siswa, ?array $kelas = null, ?array $mapel = null, ?array $pengampu = null): void
+    private function fakePusat(array $siswa, ?array $kelas = null, ?array $mapel = null, ?array $pengampu = null, ?array $akun = null): void
     {
         $kelas ??= [['uuid' => 'k-1', 'nama' => 'X RPL 1', 'tingkat' => 'X', 'jurusan_kode' => 'RPL', 'tahun_ajaran' => '2026/2027']];
         $data = [
@@ -53,6 +53,9 @@ class PusatTest extends TestCase
         }
         if ($pengampu !== null) {
             $data['pengampu'] = $pengampu;
+        }
+        if ($akun !== null) {
+            $data['akun'] = $akun;
         }
         Http::swap(new \Illuminate\Http\Client\Factory);
         Http::fake(function (Request $r) use ($data) {
@@ -252,6 +255,27 @@ class PusatTest extends TestCase
         $this->fakePusat([$this->siswaPusat('s-1', 'N-1')], null, $mapel, [$pengampu[0]]);
         $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['pengampu']['dihapus'] === 2);
         $this->assertSame(1, \App\Models\Pairing::count());
+    }
+
+    public function test_sinkron_membuat_akun_guru_dan_mapel_bk_memakai_id_bawaan(): void
+    {
+        $this->actingAs($this->admin);
+        \App\Models\Subject::whereKey(5)->delete(); // mis. Absensi baru dikosongkan tanpa mapel BK
+        \App\Models\Subject::create(['name' => 'Bimbingan Konseling', 'pusat_uuid' => 'm-bk']); // terlanjur dibuat dengan ID lain
+        $mapel = [['uuid' => 'm-bk', 'kode' => 'BK', 'nama' => 'Bimbingan Konseling', 'kelompok' => 'umum', 'aktif' => true],
+            ['uuid' => 'm-2', 'kode' => 'MTK', 'nama' => 'Matematika', 'kelompok' => 'umum', 'aktif' => true]];
+        $akun = [
+            ['uuid' => 'a-1', 'username' => 'G008', 'nama' => 'Abdul Rahman', 'aktif' => true, 'pegawai_uuid' => 'g-8', 'peran' => ['guru']],
+            ['uuid' => 'a-2', 'username' => 'G099', 'nama' => 'Tanpa Peran', 'aktif' => true, 'pegawai_uuid' => 'g-9', 'peran' => []],
+        ];
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1')], null, $mapel, [['uuid' => 'p-1', 'pegawai_uuid' => 'g-8', 'mapel_uuid' => 'm-2', 'kelas_uuid' => 'k-1']], $akun);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['akun']['baru'] === 1 && $h['pengampu']['baru'] === 1 && $h['pengampu']['tertunda'] === 0);
+        $this->assertSame('m-bk', \App\Models\Subject::find(5)?->pusat_uuid);
+        $u = \App\Models\User::where('pusat_uuid', 'a-1')->firstOrFail();
+        $this->assertSame('g-8', $u->pegawai_uuid);
+        $this->assertTrue(\App\Models\Pairing::where(['user_id' => $u->id, 'subject_id' => \App\Models\Subject::where('pusat_uuid', 'm-2')->value('id'), 'class_id' => 1])->exists());
+        $this->assertFalse(\App\Models\User::where('pusat_uuid', 'a-2')->exists());
+        $this->get('/admin/pusat')->assertOk()->assertSee('Akun guru &amp; staf', false);
     }
 
     public function test_sinkron_idempoten_dan_kontak_tidak_dihapus_bila_kosong_di_pusat(): void

@@ -39,6 +39,11 @@ class PusatSync
             $mapel = null; // izin "mapel" belum dicentang di Pusat → daftar mapel tetap dikelola di Absensi
         }
         try {
+            $akun = PusatKlien::semua('akun', '/api/v1/akun');
+        } catch (RuntimeException $e) {
+            $akun = null; // izin "akun" tidak ada → akun tetap dibuat saat guru pertama kali masuk
+        }
+        try {
             $pengampu = $mapel === null ? null : PusatKlien::semua('pengampu');
         } catch (RuntimeException $e) {
             $pengampu = null; // izin "pengampu" belum dicentang → Pasangan Mapel tetap diatur di Absensi
@@ -59,6 +64,7 @@ class PusatSync
             'siswa' => ['baru' => 0, 'ubah' => 0, 'sama' => 0, 'ambigu' => [], 'nonaktif' => 0, 'kelas_tak_dikenal' => 0, 'hanya_lokal' => 0],
             'mapel' => ['baru' => 0, 'ubah' => 0, 'tertaut' => 0, 'nonaktif' => 0, 'hanya_lokal' => []],
             'pengampu' => null,
+            'akun' => ['baru' => 0, 'tertaut' => 0],
             'contoh' => [],
             'peringatan' => [],
             'diterapkan' => false,
@@ -73,6 +79,9 @@ class PusatSync
                 $this->hasil['peringatan'][] = 'Mata pelajaran belum diambil dari Pusat: centang izin "Mata pelajaran" untuk Absensi di Pusat → Aplikasi.';
             } elseif ($mapel !== []) {
                 $this->mapel($mapel);
+            }
+            if ($akun) {
+                $this->akun($akun);
             }
             if ($terapkan) {
                 PusatAkun::terapkanWali();
@@ -172,6 +181,7 @@ class PusatSync
         if (! \App\Models\Subject::adaKolomAktif()) {
             return;
         }
+        $this->pindahkanBkKeIdBawaan($baris);
         $lokal = \App\Models\Subject::all();
         $perUuid = $lokal->whereNotNull('pusat_uuid')->keyBy('pusat_uuid');
         $perNama = $lokal->whereNull('pusat_uuid')->groupBy(fn ($s) => mb_strtolower(trim($s->name)));
@@ -190,6 +200,9 @@ class PusatSync
                 $this->hasil['mapel']['tertaut']++;
             }
             if (! $s) {
+                if (self::mapelBk($m) && ! \App\Models\Subject::find($bkId = (int) config('absensi.bk_subject_id'))) {
+                    $data['id'] = $bkId; // fitur BK di Absensi memakai ID ini
+                }
                 \App\Models\Subject::create($data + ['pusat_uuid' => $m['uuid']]);
                 $this->hasil['mapel']['baru']++;
                 $this->catat("Mapel baru: {$m['nama']}");
@@ -213,6 +226,57 @@ class PusatSync
         $this->hasil['mapel']['hanya_lokal'] = $sisa;
         if ($sisa) {
             $this->hasil['peringatan'][] = 'Mapel di Absensi yang belum ada di Pusat (tetap dipakai, tambahkan di Pusat agar tertaut): '.implode(', ', array_slice($sisa, 0, 15)).'.';
+        }
+    }
+
+    private static function mapelBk(array $m): bool
+    {
+        return mb_strtolower(trim((string) ($m['nama'] ?? ''))) === 'bimbingan konseling' || mb_strtoupper((string) ($m['kode'] ?? '')) === 'BK';
+    }
+
+    /** Perbaikan: mapel BK dari Pusat yang terlanjur dibuat dengan ID lain dipindah ke ID bawaan BK selama belum dipakai presensi/nilai. */
+    private function pindahkanBkKeIdBawaan(array $baris): void
+    {
+        $bkId = (int) config('absensi.bk_subject_id');
+        $m = collect($baris)->first(fn ($m) => empty($m['dihapus']) && self::mapelBk($m));
+        if (! $m || \App\Models\Subject::find($bkId)) {
+            return;
+        }
+        $s = \App\Models\Subject::where('pusat_uuid', $m['uuid'])->first();
+        if (! $s || DB::table('attendance')->where('subject_id', $s->id)->exists() || DB::table('grade_activities')->where('subject_id', $s->id)->exists()) {
+            return;
+        }
+        DB::table('teacher_subject_class_pairing')->where('subject_id', $s->id)->update(['subject_id' => $bkId]);
+        DB::table('subjects')->where('id', $s->id)->update(['id' => $bkId]);
+        $this->catat('Mapel Bimbingan Konseling dipindah ke ID '.$bkId);
+    }
+
+    /**
+     * Akun guru/staf yang diberi peran Absensi di Pusat langsung dibuat/ditautkan di sini (tanpa menunggu login pertama),
+     * sehingga wali kelas & pasangan mapel sudah terpasang. Aturannya sama dengan login lewat Pusat.
+     */
+    private function akun(array $baris): void
+    {
+        PusatAkun::$tundaEfek = true;
+        try {
+            foreach ($baris as $a) {
+                if (empty($a['aktif']) || empty($a['uuid']) || ! PusatAkun::petakanPeran((array) ($a['peran'] ?? []))) {
+                    continue;
+                }
+                $lama = \App\Models\User::where('pusat_uuid', $a['uuid'])->first();
+                [$u] = PusatAkun::masuk([
+                    'sub' => $a['uuid'], 'username' => $a['username'] ?? '', 'nama' => $a['nama'] ?? null,
+                    'peran' => $a['peran'] ?? [], 'pegawai' => ['uuid' => $a['pegawai_uuid'] ?? null],
+                ]);
+                if ($u && ! $lama) {
+                    $u->wasRecentlyCreated ? $this->hasil['akun']['baru']++ : $this->hasil['akun']['tertaut']++;
+                }
+            }
+        } finally {
+            PusatAkun::$tundaEfek = false;
+        }
+        if ($this->hasil['akun']['baru']) {
+            $this->catat("Akun dari Pusat: +{$this->hasil['akun']['baru']}");
         }
     }
 

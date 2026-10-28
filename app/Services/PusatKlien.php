@@ -61,12 +61,13 @@ class PusatKlien
      *
      * @return array<int,array>
      */
-    public static function semua(string $sumber): array
+    public static function semua(string $sumber, ?string $jalur = null): array
     {
+        $jalur ??= '/api/v1/master/'.$sumber;
         $baris = [];
         $hal = 1;
         do {
-            $res = self::http()->get('/api/v1/master/'.$sumber, ['per_page' => 500, 'page' => $hal]);
+            $res = self::http()->get($jalur, ['per_page' => 500, 'page' => $hal]);
             if (! $res->successful()) {
                 $pesan = $res->json('error.pesan') ?: 'HTTP '.$res->status();
                 throw new RuntimeException("Pusat menolak permintaan {$sumber}: {$pesan}");

@@ -28,7 +28,7 @@ class PusatController extends Controller
                 'perluSinkron' => $siap && (int) PusatKlien::baca('perubahan_menunggu', 0) > 0,
                 'otomatis' => (bool) config('pusat.sinkron_otomatis'),
                 'ruteUji' => route('admin.pusat.uji'), 'ruteSinkron' => route('admin.pusat.terapkan'),
-                'catatan' => 'Tidak ada data yang dihapus: siswa yang keluar/hilang di Pusat hanya diberi status "keluar", riwayat absensi tetap ada. Mapel, pasangan mapel, wali kelas, dan nilai tidak disentuh.',
+                'catatan' => 'Tidak ada data yang dihapus: siswa yang keluar/hilang di Pusat hanya diberi status "keluar", riwayat absensi tetap ada. Mapel yang hilang di Pusat hanya dinonaktifkan; presensi dan nilai tidak pernah dihapus oleh sinkron.',
             ],
         ]);
     }

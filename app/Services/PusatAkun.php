@@ -9,6 +9,9 @@ use Illuminate\Support\Str;
 /** Mencocokkan profil dari Pusat (userinfo) dengan akun lokal Absensi. */
 class PusatAkun
 {
+    /** true selama sinkron massal: wali kelas & pasangan mapel dipasang sekali di akhir, bukan per akun. */
+    public static bool $tundaEfek = false;
+
     /**
      * @param  array  $info  objek "user" dari Pusat (sub, username, nama, peran[] ...)
      * @return array{0:?User,1:?string}  [akun, pesan galat]
@@ -53,9 +56,11 @@ class PusatAkun
                 'password_hash' => Passwords::make(Str::random(48)), // tak diketahui siapa pun: hanya login lewat Pusat
                 'is_active' => true, 'pusat_uuid' => $uuid,
             ] + (self::adaKolomPegawai() ? ['pegawai_uuid' => $pegawai ?: null] : []));
-            self::terapkanWali();
-            if ($pegawai) {
-                PusatPengampu::terapkanSimpanan();
+            if (! self::$tundaEfek) {
+                self::terapkanWali();
+                if ($pegawai) {
+                    PusatPengampu::terapkanSimpanan();
+                }
             }
             Audit::log('Akun dari Pusat', 'Akun Guru', $user->nama, "Akun dibuat otomatis saat login pertama lewat Pusat, peran: ".implode(', ', $peran));
 
@@ -80,7 +85,7 @@ class PusatAkun
             $perubahan['nama'] = (string) $info['nama'];
         }
         $user->update($perubahan);
-        if (array_key_exists('pegawai_uuid', $perubahan)) {
+        if (array_key_exists('pegawai_uuid', $perubahan) && ! self::$tundaEfek) {
             self::terapkanWali();
             PusatPengampu::terapkanSimpanan();
         }
