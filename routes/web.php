@@ -168,7 +168,8 @@ Route::middleware(['auth', 'auth.session'])->group(function () {
         Route::delete('/jurusan/{jurusan}', [Admin\MajorController::class, 'destroy'])->name('majors.destroy')->middleware('induk.pusat:Jurusan');
 
         Route::get('/pasangan', [Admin\PairingController::class, 'index'])->name('pairings');
-        Route::post('/pasangan', [Admin\PairingController::class, 'store'])->name('pairings.store');
+        Route::post('/pasangan', [Admin\PairingController::class, 'store'])->name('pairings.store')->middleware('induk.pusat:Pasangan');
+        Route::get('/pasangan/csv-pusat', [Admin\PairingController::class, 'csv'])->name('pairings.csv');
         Route::delete('/pasangan', [Admin\PairingController::class, 'destroy'])->name('pairings.destroy');
 
         Route::get('/pusat', [Admin\PusatController::class, 'index'])->name('pusat');

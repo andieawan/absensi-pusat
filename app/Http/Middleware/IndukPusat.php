@@ -18,16 +18,15 @@ class IndukPusat
             return $next($request);
         }
         $mapelPusat = \App\Models\Subject::dariPusat();
-        if ($apa === 'Mapel' && ! $mapelPusat) {
-            return $next($request); // daftar mapel baru dikunci setelah diambil dari Pusat
+        $pengampuPusat = \App\Services\PusatPengampu::aktif();
+        if (($apa === 'Mapel' && ! $mapelPusat) || ($apa === 'Pasangan' && ! $pengampuPusat)) {
+            return $next($request); // mapel & pasangan baru dikunci setelah diambil dari Pusat
         }
-        $kunci = $mapelPusat ? ['kelas', 'guru', 'siswa', 'mapel'] : ['kelas', 'guru', 'siswa'];
+        $kunci = array_merge(['kelas', 'guru', 'siswa'], $mapelPusat ? ['mapel'] : [], $pengampuPusat ? ['pasangan'] : []);
         if ($request->route('type') !== null && ! in_array($request->route('type'), $kunci, true)) {
-            return $next($request); // impor pasangan/absensi/nilai tetap di Absensi
+            return $next($request); // impor absensi/nilai (dan mapel/pasangan sebelum diambil dari Pusat) tetap di Absensi
         }
-        if ($apa === 'Mapel') {
-            $apa = 'Mata_pelajaran';
-        }
+        $apa = ['Mapel' => 'Mata_pelajaran', 'Pasangan' => 'Pasangan_mapel (Pengampu Mapel)'][$apa] ?? $apa;
 
         return back()->with('error', str_replace('_', ' ', $apa).' dikelola di Pusat Sekolah. Ubah di Pusat; perubahan tersalin otomatis ke Absensi.');
     }

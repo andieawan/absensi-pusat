@@ -54,6 +54,9 @@ class PusatAkun
                 'is_active' => true, 'pusat_uuid' => $uuid,
             ] + (self::adaKolomPegawai() ? ['pegawai_uuid' => $pegawai ?: null] : []));
             self::terapkanWali();
+            if ($pegawai) {
+                PusatPengampu::terapkanSimpanan();
+            }
             Audit::log('Akun dari Pusat', 'Akun Guru', $user->nama, "Akun dibuat otomatis saat login pertama lewat Pusat, peran: ".implode(', ', $peran));
 
             return [$user, null];
@@ -79,6 +82,7 @@ class PusatAkun
         $user->update($perubahan);
         if (array_key_exists('pegawai_uuid', $perubahan)) {
             self::terapkanWali();
+            PusatPengampu::terapkanSimpanan();
         }
         if (isset($perubahan['roles'])) {
             Audit::log('Peran dari Pusat', 'Akun Guru', $user->nama, 'Peran diselaraskan dengan Pusat: '.implode(', ', $dulu).' → '.implode(', ', $baru));
@@ -122,6 +126,7 @@ class PusatAkun
         if ($user && $user->pegawai_uuid !== $pegawai) {
             $user->update(['pegawai_uuid' => $pegawai]);
             self::terapkanWali();
+            PusatPengampu::terapkanSimpanan();
         }
     }
 

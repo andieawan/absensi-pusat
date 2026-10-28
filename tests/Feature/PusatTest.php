@@ -39,7 +39,7 @@ class PusatTest extends TestCase
     }
 
     /** Pusat palsu untuk sinkron. */
-    private function fakePusat(array $siswa, ?array $kelas = null, ?array $mapel = null): void
+    private function fakePusat(array $siswa, ?array $kelas = null, ?array $mapel = null, ?array $pengampu = null): void
     {
         $kelas ??= [['uuid' => 'k-1', 'nama' => 'X RPL 1', 'tingkat' => 'X', 'jurusan_kode' => 'RPL', 'tahun_ajaran' => '2026/2027']];
         $data = [
@@ -50,6 +50,9 @@ class PusatTest extends TestCase
         ];
         if ($mapel !== null) {
             $data['mapel'] = $mapel;
+        }
+        if ($pengampu !== null) {
+            $data['pengampu'] = $pengampu;
         }
         Http::swap(new \Illuminate\Http\Client\Factory);
         Http::fake(function (Request $r) use ($data) {
@@ -208,6 +211,44 @@ class PusatTest extends TestCase
         $pai = \App\Models\Subject::where('pusat_uuid', 'm-2')->first();
         $this->assertFalse($pai->aktif);
         $this->assertFalse(\App\Models\Subject::regular()->whereKey($pai->id)->exists());
+    }
+
+    public function test_pasangan_mapel_dari_pusat(): void
+    {
+        $this->actingAs($this->admin);
+        $mapel = [['uuid' => 'm-1', 'kode' => 'BIND', 'nama' => 'Bahasa Indonesia', 'kelompok' => 'umum', 'aktif' => true],
+            ['uuid' => 'm-2', 'kode' => 'MTK', 'nama' => 'Matematika', 'kelompok' => 'umum', 'aktif' => true]];
+        $this->guru->update(['pegawai_uuid' => 'g-1']);
+        \App\Models\Pairing::query()->insertOrIgnore(['user_id' => $this->guru->id, 'subject_id' => 2, 'class_id' => 1]);   // sama dengan Pusat → ditautkan
+        \App\Models\Pairing::query()->insertOrIgnore(['user_id' => $this->wali->id, 'subject_id' => 1, 'class_id' => 1]);   // hanya lokal → dibiarkan
+        $this->get(route('admin.pairings.csv'))->assertOk()->assertSee('guru;mapel;kelas')->assertSee('Matematika;X RPL 1');
+
+        $pengampu = [
+            ['uuid' => 'p-1', 'pegawai_uuid' => 'g-1', 'mapel_uuid' => 'm-2', 'kelas_uuid' => 'k-1'],
+            ['uuid' => 'p-2', 'pegawai_uuid' => 'g-1', 'mapel_uuid' => 'm-1', 'kelas_uuid' => 'k-1'],
+            ['uuid' => 'p-3', 'pegawai_uuid' => 'g-baru', 'mapel_uuid' => 'm-1', 'kelas_uuid' => 'k-1'], // guru belum pernah masuk
+        ];
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1')], null, $mapel, $pengampu);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['pengampu']['baru'] === 1 && $h['pengampu']['tertaut'] === 1
+            && $h['pengampu']['tertunda'] === 1 && $h['pengampu']['hanya_lokal'] === 1);
+        $this->assertSame(3, \App\Models\Pairing::count());
+        $this->assertSame('p-1', \App\Models\Pairing::where(['user_id' => $this->guru->id, 'subject_id' => 2])->value('pusat_uuid'));
+
+        // terkunci: tambah ditolak, hapus pasangan dari Pusat ditolak, pasangan lokal masih bisa dihapus
+        $this->post(route('admin.pairings.store'), ['user_id' => $this->guru->id, 'subject_id' => 1, 'class_id' => 2])->assertSessionHas('error');
+        $this->delete(route('admin.pairings.destroy'), ['user_id' => $this->guru->id, 'subject_id' => 2, 'class_id' => 1])->assertSessionHas('error');
+        $this->delete(route('admin.pairings.destroy'), ['user_id' => $this->wali->id, 'subject_id' => 1, 'class_id' => 1])->assertSessionHas('success');
+        $this->get(route('admin.pairings'))->assertOk()->assertSee('Pasangan mapel dikelola di Pusat');
+
+        // guru baru masuk lewat Pusat → pengampunya langsung terpasang
+        $u = \App\Models\User::create(['username' => 'baru', 'nama' => 'Guru Baru', 'roles' => ['guru'], 'subjects' => [], 'classes' => [], 'password_hash' => 'x', 'is_active' => true, 'pusat_uuid' => 'a-9']);
+        \App\Services\PusatAkun::tautPegawai(['uuid' => 'a-9', 'pegawai_uuid' => 'g-baru']);
+        $this->assertTrue(\App\Models\Pairing::where(['user_id' => $u->id, 'subject_id' => 1, 'class_id' => 1])->exists());
+
+        // dihapus di Pusat → hilang di Absensi
+        $this->fakePusat([$this->siswaPusat('s-1', 'N-1')], null, $mapel, [$pengampu[0]]);
+        $this->post('/admin/pusat/terapkan')->assertSessionHas('hasil', fn ($h) => $h['pengampu']['dihapus'] === 2);
+        $this->assertSame(1, \App\Models\Pairing::count());
     }
 
     public function test_sinkron_idempoten_dan_kontak_tidak_dihapus_bila_kosong_di_pusat(): void

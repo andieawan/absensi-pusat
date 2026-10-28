@@ -38,6 +38,11 @@ class PusatSync
         } catch (RuntimeException $e) {
             $mapel = null; // izin "mapel" belum dicentang di Pusat → daftar mapel tetap dikelola di Absensi
         }
+        try {
+            $pengampu = $mapel === null ? null : PusatKlien::semua('pengampu');
+        } catch (RuntimeException $e) {
+            $pengampu = null; // izin "pengampu" belum dicentang → Pasangan Mapel tetap diatur di Absensi
+        }
 
         $aktif = collect($tahun)->firstWhere('aktif', true);
         if (! $aktif) {
@@ -53,6 +58,7 @@ class PusatSync
             'kelas' => ['baru' => 0, 'ubah' => 0, 'sama' => 0, 'ambigu' => [], 'hilang' => []],
             'siswa' => ['baru' => 0, 'ubah' => 0, 'sama' => 0, 'ambigu' => [], 'nonaktif' => 0, 'kelas_tak_dikenal' => 0, 'hanya_lokal' => 0],
             'mapel' => ['baru' => 0, 'ubah' => 0, 'tertaut' => 0, 'nonaktif' => 0, 'hanya_lokal' => []],
+            'pengampu' => null,
             'contoh' => [],
             'peringatan' => [],
             'diterapkan' => false,
@@ -70,6 +76,13 @@ class PusatSync
             }
             if ($terapkan) {
                 PusatAkun::terapkanWali();
+            }
+            if ($pengampu !== null && $pengampu !== [] && PusatPengampu::siap()) {
+                $this->pengampu($pengampu);
+            } elseif ($mapel !== null && $pengampu === null) {
+                $this->hasil['peringatan'][] = 'Pasangan mapel belum diambil dari Pusat: centang izin "Pengampu mapel" untuk Absensi di Pusat → Aplikasi.';
+            }
+            if ($terapkan) {
                 $set = \App\Models\SchoolSetting::current();
                 if ($set->exists && $set->tahun_ajaran !== $aktif['nama']) {
                     \App\Models\SchoolSetting::put(['tahun_ajaran' => $aktif['nama']]); // tahun ajaran mengikuti Pusat
@@ -93,6 +106,10 @@ class PusatSync
             PusatKlien::simpan('perubahan_menunggu', 0);
             if (! empty($mapel)) {
                 PusatKlien::simpan('mapel_pusat', 1);
+            }
+            if (! empty($pengampu) && PusatPengampu::siap()) {
+                PusatKlien::simpan('pengampu_pusat', 1);
+                PusatPengampu::simpanData($pengampu);
             }
             Audit::log('Sinkron Pusat', 'Integrasi Pusat', null, sprintf(
                 'kelas +%d ~%d, siswa +%d ~%d, dinonaktifkan %d',
@@ -196,6 +213,22 @@ class PusatSync
         $this->hasil['mapel']['hanya_lokal'] = $sisa;
         if ($sisa) {
             $this->hasil['peringatan'][] = 'Mapel di Absensi yang belum ada di Pusat (tetap dipakai, tambahkan di Pusat agar tertaut): '.implode(', ', array_slice($sisa, 0, 15)).'.';
+        }
+    }
+
+    private function pengampu(array $baris): void
+    {
+        $h = PusatPengampu::terapkan($baris);
+        $this->hasil['pengampu'] = $h;
+        if ($h['baru'] || $h['dihapus']) {
+            $this->catat("Pasangan mapel dari Pusat: +{$h['baru']} −{$h['dihapus']}");
+        }
+        foreach (array_filter([
+            $h['tertunda'] ? $h['tertunda'].' pengampu menunggu gurunya masuk Absensi lewat Pusat (dipasang otomatis saat login pertama).' : null,
+            $h['tanpa_mapel'] ? $h['tanpa_mapel'].' pengampu memakai mapel yang belum ada di Absensi.' : null,
+            $h['hanya_lokal'] ? $h['hanya_lokal'].' pasangan mapel hanya ada di Absensi (tidak diubah; tambahkan di Pusat agar tertaut, lalu hapus yang lokal).' : null,
+        ]) as $w) {
+            $this->hasil['peringatan'][] = $w;
         }
     }
 
