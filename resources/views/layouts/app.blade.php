@@ -13,8 +13,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Absensi">
-    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}?v={{ @filemtime(public_path('icons/apple-touch-icon.png')) }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192.png') }}?v={{ @filemtime(public_path('icons/icon-192.png')) }}">
     <meta name="sw-url" content="{{ asset('sw.js') }}">
     @stack('head')
 </head>
@@ -55,7 +55,7 @@
         $initial = mb_strtoupper(mb_substr(trim(preg_replace('/^(Dra?\.|Drs\.|Ir\.|H\.|Hj\.)\s*/i', '', $me->nama)), 0, 1));
     @endphp
     <header class="nav"><div class="nav-in">
-        <a class="brand" href="{{ route('dashboard') }}"><img class="logo-img" src="{{ asset('icons/icon-192.png') }}" alt="" width="36" height="36"><span><b>Absensi Siswa</b><small>{{ $settings->school_name }}</small></span></a>
+        <a class="brand" href="{{ route('dashboard') }}"><img class="logo-img" src="{{ asset('icons/icon-192.png') }}?v={{ @filemtime(public_path('icons/icon-192.png')) }}" alt="" width="36" height="36"><span><b>Absensi Siswa</b><small>{{ $settings->school_name }}</small></span></a>
         <nav class="tabs" aria-label="Menu utama">
             @foreach(array_merge($tabs, $extra) as [$r, $label, , $icon, $pat])
                 <a href="{{ ($r === 'bk.home' && config('absensi.bk_url')) ? config('absensi.bk_url') : (($r === 'tu.home' && config('absensi.tu_url')) ? config('absensi.tu_url') : (($r === 'selfcheck' && config('absensi.tu_url')) ? rtrim(config('absensi.tu_url'), '/').'/absen-saya' : route($r))) }}" @if(request()->routeIs($pat)) class="on" aria-current="page" @endif><svg class="ic"><use href="#{{ $icon }}"/></svg>{{ $label }}</a>
