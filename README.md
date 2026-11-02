@@ -3,6 +3,8 @@
 
 > **Produksi:** urutan lengkap Pusat → aplikasi ada di [runbook Pusat](https://github.com/andieawan/pusat-sekolah/blob/main/docs/PRODUKSI.md). Cek kesiapan server kapan saja: `php artisan absensi:periksa`.
 
+> **Beralih ke Jurnal Guru?** Data dikemas dengan `php artisan absensi:ekspor-jurnal`; langkah lengkap di [PINDAH-DARI-ABSENSI.md](https://github.com/andieawan/jurnal-pusat/blob/main/docs/PINDAH-DARI-ABSENSI.md).
+
 Aplikasi absensi & nilai siswa berbasis **Laravel 13** (PHP 8.3+). Halaman dirender di server dengan Blade;
 JavaScript hanya sedikit (tanpa npm/Vite, tanpa langkah build). Database MySQL/MariaDB (disarankan) atau SQLite.
 
